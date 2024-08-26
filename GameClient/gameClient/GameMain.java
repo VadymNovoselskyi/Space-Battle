@@ -4,11 +4,11 @@ import java.io.IOException;
 
 public class GameMain {
 	private GameController gameController;
-	private String host = "localhost";
-	private int port = 9001;
-//	private String host = "127.0.0.1";
+//	private String host = "localhost";
+	private int port = 9864;
+	private String host = "127.0.0.1";
 
-	public GameMain(){
+	public GameMain() {
 		//host = JOptionPane.showInputDialog("Server Adress");
 
 		try {

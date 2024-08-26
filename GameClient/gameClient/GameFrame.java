@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferStrategy;
@@ -19,6 +20,7 @@ public class GameFrame extends JFrame implements KeyListener{
 
 	private Canvas gameCanvas;
 	private BufferStrategy backBuffer;
+	private Image background = null;
 
 	private Dimension canvasDimension;
 	private int width, height;
@@ -65,6 +67,7 @@ public class GameFrame extends JFrame implements KeyListener{
         Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
 		g.setColor(Color.BLACK);
 		g.fillRect(0, 0, width, height);
+		g.drawImage(background, 0, 0, width, height, gameCanvas);
 
         g.setFont(font);
         g.setColor(color);
@@ -118,6 +121,10 @@ public class GameFrame extends JFrame implements KeyListener{
 
 	@Override
 	public void keyTyped(KeyEvent e) {}
+
+	public void setBackground(Image background) {
+		this.background = background;
+	}
 
 	public Dimension getCanvasDimension() {
 		return canvasDimension;

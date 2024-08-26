@@ -3,62 +3,71 @@ package gameServer;
 import java.awt.Rectangle;
 
 public class Player {
-  private int playerID;
-  private double xPos, yPos;
-  private int health;
-  private boolean isDead = false;
+	private int playerID;
+	private double xPos, yPos;
+	private int dx = 0, dy = 0;
+	private int health;
+	private boolean isDead = false;
 
-  private Rectangle area;
+	private Rectangle area;
 
-  public Player(int playerID, int xPos, int yPos,int health) {
-     this(playerID, xPos, yPos, health, new Rectangle(xPos,yPos, 32, 32));
-  }
+	public Player(int playerID, int xPos, int yPos,int health) {
+		this(playerID, xPos, yPos, health, new Rectangle(xPos,yPos, 32, 32));
+	}
 
-  public Player(int playerID, int xPos, int yPos, int health, Rectangle area) {
-     this.playerID = playerID;
-     this.xPos = xPos;
-     this.yPos = yPos;
-     this.health = health;
-     this.area = area;
-  }
+	public Player(int playerID, int xPos, int yPos, int health, Rectangle area) {
+		this.playerID = playerID;
+		this.xPos = xPos;
+		this.yPos = yPos;
+		this.health = health;
+		this.area = area;
+	}
 
-  public void update(int health) {
-     this.health = health;
-  }
+	public void update(int health) {
+		this.health = health;
+	}
 
-  public void update(int xPos, int yPos) {
-     this.xPos = xPos;
-     this.yPos = yPos;
-     this.area.setLocation(xPos, yPos);
-  }
+	public void update(int xPos, int yPos) {
+		this.xPos = xPos;
+		this.yPos = yPos;
+		this.area.setLocation(xPos, yPos);
+	}
 
-  public void update(int xPos, int yPos, int health) {
-     this.update(health);
-     this.update(xPos, yPos);
-  }
+	public void update(int dx, int dy, int xPos, int yPos) {
+		this.dx = dx;
+		this.dy = dy;
+		this.xPos = xPos;
+		this.yPos = yPos;
+		this.area.setLocation(xPos, yPos);
+	}
 
-  public Rectangle getArea(){
-     return area;
-  }
+	public void update(int xPos, int yPos, int health) {
+		this.update(health);
+		this.update(xPos, yPos);
+	}
 
-  public boolean collision(Player otherPlayer) {
-     return this.area.intersects(otherPlayer.getArea());
-  }
+	public Rectangle getArea(){
+		return area;
+	}
 
-  public int getID(){
-     return playerID;
-  }
+	public boolean collision(Player otherPlayer) {
+		return this.area.intersects(otherPlayer.getArea());
+	}
 
-  public boolean isDead() {
-	return isDead;
-}
+	public int getID(){
+		return playerID;
+	}
 
-public void setDead(boolean isDead) {
-	this.isDead = isDead;
-}
+	public boolean isDead() {
+		return isDead;
+	}
 
-@Override
-  public String toString() {
-     return playerID + "," + (int)xPos + "," + (int)yPos + "," + health;
-  }
+	public void setDead(boolean isDead) {
+		this.isDead = isDead;
+	}
+
+	@Override
+	public String toString() {
+		return playerID + "," + dx +"," + dy + "," + (int)xPos + "," + (int)yPos + "," + health;
+	}
 }

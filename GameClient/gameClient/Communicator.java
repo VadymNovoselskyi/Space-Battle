@@ -57,13 +57,18 @@ public class Communicator extends Thread{
 			socket = new DatagramSocket();
 			notifyServer(Command.NEW_PLAYER);
 
-			byte[] receiveData = new byte[1024];
+			byte[] receiveData = new byte[64];
 			while(!quit) {
 				DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 				socket.receive(receivedPacket);
 				String data = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
-
-				gameController.updatePlayerMap(data);
+				
+//				System.out.println(data);
+				
+				String[] dataList = data.split(",");
+				Command cmd = Command.valueOf(dataList[0]);
+				if(cmd != Command.UPDATE_ALL) gameController.updatePlayerMap(data);
+				else gameController.updateAll(dataList);
 			}
 		}catch (IOException e) {
 			closeConnection();

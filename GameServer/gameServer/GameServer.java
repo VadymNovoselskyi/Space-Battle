@@ -19,7 +19,7 @@ public class GameServer {
 		this.port = port;
 		socket = new DatagramSocket(port);
 
-		byte[] receiveData = new byte[1024];
+		byte[] receiveData = new byte[32];
 		while (true) {
 			DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 			socket.receive(receivedPacket);
@@ -29,7 +29,7 @@ public class GameServer {
 			String message = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
 			String playerAddress = playerIP.getHostAddress() + ":" + playerPort;
 
-//			System.out.println("Received from player " + playerAddresses.get(playerAddress) + ": " + message +". Address: " +playerAddress);
+			//			System.out.println("Received from player " + playerAddresses.get(playerAddress) + ": " + message +". Address: " +playerAddress);
 			if(!deadPlayerMap.containsKey(playerAddress)) {
 				exeCommand(message, playerAddress);
 			} else {
@@ -54,6 +54,18 @@ public class GameServer {
 
 			notifyClient(Command.CONNECTED, newPlayer.toString(), playerAddress);
 			notifyAllButThis(cmd, newPlayer.toString(), playerAddress);
+			
+			if(alivePlayerMap.size() > 1) {
+				String playerList = "";
+				Player requestingPlayer = alivePlayerMap.get(playerAddress);
+				for (Player player : alivePlayerMap.values()) {
+					if(player != requestingPlayer) {
+						playerList += "," +player;
+					}
+				}
+				// playerList.substring(1) Tar bort 1:a ","
+				notifyClient(Command.RECEIVE_ALL, playerList.substring(1), playerAddress);
+			}
 
 			System.out.println("PlayerID: " + playerID + " Connected to server");
 			playerAddresses.put(playerAddress, playerID);
@@ -67,20 +79,6 @@ public class GameServer {
 			Player movedPlayer = alivePlayerMap.get(playerAddress);
 			movedPlayer.update(xPos, yPos);
 			notifyAllButThis(cmd, movedPlayer.toString(), playerAddress);
-			break;
-
-		case GET_ALL:
-			if(alivePlayerMap.size() > 1){
-				String playerList = "";
-				Player requestingPlayer = alivePlayerMap.get(playerAddress);
-				for (Player player : alivePlayerMap.values()) {
-					if(player != requestingPlayer) {
-						playerList += "," +player;
-					}
-				}
-				// playerList.substring(1) Tar bort 1:a ","
-				notifyClient(Command.UPDATE_ALL, playerList.substring(1), playerAddress);
-			}
 			break;
 
 		case HIT:
@@ -129,12 +127,12 @@ public class GameServer {
 		byte[] sendData = data.getBytes();
 
 		InetAddress playerIP = null;
-        try {
-            playerIP = InetAddress.getByName(playerAddress.split(":")[0]);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-        int playerPort = Integer.parseInt(playerAddress.split(":")[1]);
+		try {
+			playerIP = InetAddress.getByName(playerAddress.split(":")[0]);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+		int playerPort = Integer.parseInt(playerAddress.split(":")[1]);
 
 		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, playerIP, playerPort);
 		try {

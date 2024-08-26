@@ -2,10 +2,13 @@ package gameClient;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.HashMap;
+
+import javax.swing.ImageIcon;
 
 import gameServer.Command;
 
@@ -18,7 +21,8 @@ public class GameController extends Thread{
 	private int gameWidth, gameHeight;
 
 
-	private int fps = 30;
+	private int fpsPlayer = 30;
+	private int fpsServer = 18;
 	private boolean gameRunning = true, dead = false;
 
 	private Font gameNameFont, gameOverFont;
@@ -29,78 +33,99 @@ public class GameController extends Thread{
 	public GameController(String host, int port, int gameWidth, int gameHeight) throws IOException {
 		this.gameWidth = gameWidth;
 		this.gameHeight = gameHeight;
-		loadFonts();
 		gameFrame = new GameFrame(gameWidth, gameHeight);
 		communicator = new Communicator(this, host, port);
+		loadFonts();
+		loadScene();
 	}
 
 	public void closeConnection(){
 		communicator.closeConnection();
 	}
 
-	public void update(long deltaTime){
+	public void update(long deltaTime) {
+		boolean changed = false;
+		if(me.getDirectionX() != 0) {
+			me.setDirectionX(0);
+			changed = true;
+		}
+		if(me.getDirectionY() != 0) {
+			me.setDirectionY(0);
+			changed = true;
+		}
 		if(gameFrame.keyDown.get("right")) {
 			me.setDirectionX(1);
+			changed = true;
 		}
 		if(gameFrame.keyDown.get("left")) {
 			me.setDirectionX(-1);
+			changed = true;
 		}
 		if(gameFrame.keyDown.get("down")) {
 			me.setDirectionY(1);
+			changed = true;
 		}
 		if(gameFrame.keyDown.get("up")) {
 			me.setDirectionY(-1);
+			changed = true;
 		}
+		
 		if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
 			communicator.notifyServer(Command.DISCONNECT);
 		}
 
-		if(me.update(deltaTime)) {
+		if(changed) {
+			me.move(deltaTime);
 			communicator.notifyServer(Command.MOVE, me.toString());
 		}
+		
 		if(me.xPos <= 0 || me.xPos >= gameWidth || me.yPos <= 0 || me.yPos >= gameHeight) {
 			communicator.notifyServer(Command.DEAD);
 			dead = true;
 		}
 
-		me.setDirectionX(0);
-		me.setDirectionY(0);
 	}
 
+	public void updateAll(String[] dataList) {
+		int playerID, dx, dy, xPos, yPos, health; 
+		for(int i = 1; i < dataList.length-1; i += 6 ) {
+			playerID = Integer.valueOf(dataList[i]);
+			dx = Integer.valueOf(dataList[i+1]);
+			dy = Integer.valueOf(dataList[i+2]);
+			xPos = Integer.valueOf(dataList[i+3]);
+			yPos = Integer.valueOf(dataList[i+4]);
+			health = Integer.valueOf(dataList[i+5]);
+			
+			playerMap.get(playerID).update(dx, dy, xPos, yPos);
+		}
 
-	public synchronized void updatePlayerMap(String data){
+	}
+	public void updatePlayerMap(String data) {
 		String[] dataList = data.split(",");
 
 		Command cmd = Command.valueOf(dataList[0]);
-
 		int playerID = Integer.valueOf(dataList[1]);
-		int xPos = Integer.valueOf(dataList[2]);
-		int yPos = Integer.valueOf(dataList[3]);
-		int health = Integer.valueOf(dataList[4]);
+		int xPos = Integer.valueOf(dataList[4]);
+		int yPos = Integer.valueOf(dataList[5]);
+		int health = Integer.valueOf(dataList[6]);
 
 		switch(cmd) {
 		case CONNECTED:
-			me = new ClientPlayer(playerID,xPos, yPos, health);
-			me.setColor(Color.BLUE);
+			me = new ClientPlayer(playerID, xPos, yPos, health);
+			me.setColor(Color.GREEN);
 			playerMap.put(playerID, me);
 			this.start();
-
-			communicator.notifyServer(Command.GET_ALL);
 			break;
-
-		case UPDATE_ALL:
-			for(int i = 1; i < dataList.length-1; i += 4 ) {
+			
+		case RECEIVE_ALL:
+			for(int i = 1; i < dataList.length-1; i += 6 ) {
 				playerID = Integer.valueOf(dataList[i]);
-				xPos = Integer.valueOf(dataList[i+1]);
-				yPos = Integer.valueOf(dataList[i+2]);
-				health = Integer.valueOf(dataList[i+3]);
+				xPos = Integer.valueOf(dataList[i+3]);
+				yPos = Integer.valueOf(dataList[i+4]);
+				health = Integer.valueOf(dataList[i+5]);
 
 				playerMap.put(playerID, new Player(playerID,xPos, yPos,health));
 			}
-			break;
-
-		case MOVE:
-			playerMap.get(playerID).update(xPos, yPos);
 			break;
 
 		case NEW_PLAYER:
@@ -118,6 +143,11 @@ public class GameController extends Thread{
 		}
 	}
 
+	public void loadScene() {
+		Image background = new ImageIcon(getClass().getResource("/background.jpg")).getImage();
+		gameFrame.setBackground(background);
+	}
+
 	public void loadFonts() {
 		try {
 			String path = getClass().getResource("/droidlover.ttf").getFile();
@@ -128,35 +158,50 @@ public class GameController extends Thread{
 			gameOverFont = baseFont.deriveFont(100f);
 
 		} catch (Exception e) {
-			gameNameFont = new Font("Serif", Font.PLAIN, 32);
-			gameOverFont = new Font("Serif", Font.PLAIN, 150);
+			gameNameFont = new Font("Serif", Font.PLAIN, 3);
+			gameOverFont = new Font("Serif", Font.PLAIN, 100);
 			e.printStackTrace();
+		}
+	}
+	
+	public void movePlayers(long deltaTime) {
+		for(Player player : playerMap.values()) {
+			player.move(deltaTime);
 		}
 	}
 
 	@Override
 	public void run() {
-		long lastUpdateTime = System.nanoTime();
-		double delay = 1e9 / fps;
+		long lastPlayerUpdateTime = System.nanoTime();
+		double delayClient = 1e9 / fpsPlayer;
+		long lastServerUpdateTime = System.nanoTime();
+		double delayServer = 1e9 / fpsServer;
 
 		while(gameRunning) {
-			long deltaTime = System.nanoTime() - lastUpdateTime;
+			long deltaTimeClient = System.nanoTime() - lastPlayerUpdateTime;
+			long deltaTimeServer = System.nanoTime() - lastServerUpdateTime;
 
-			if(deltaTime > delay) {
+			if(deltaTimeServer > delayServer) {
 				if(!dead) {
-					update(deltaTime);
+					update(deltaTimeServer);
 				} else if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
 					communicator.notifyServer(Command.DISCONNECT);
 				}
-				gameFrame.write("The best game ever", 10, 40, Color.BLUE, gameNameFont);
+				lastServerUpdateTime = System.nanoTime();
+			}
+			if(deltaTimeClient > delayClient) {
+				gameFrame.write("The best game ever", 10, 40, Color.YELLOW, gameNameFont);
 				if(dead) {
 					gameFrame.write("You dead lol", Color.RED, gameOverFont);
 				}
+				movePlayers(deltaTimeClient);
 				gameFrame.render(playerMap);
-				lastUpdateTime = System.nanoTime();
-			} else {
+				lastPlayerUpdateTime = System.nanoTime();
+			}
+
+			else {
 				try {
-					Thread.sleep((long) ((delay - deltaTime) / 1e6));
+					Thread.sleep((long) ((delayClient - deltaTimeClient) / 1e6));
 				} catch (InterruptedException e) {}
 			}
 		}
