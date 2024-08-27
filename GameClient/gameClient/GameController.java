@@ -16,13 +16,13 @@ public class GameController extends Thread{
 	private GameFrame gameFrame;
 	private Communicator communicator;
 	private ClientPlayer me;
+	private Player mirrorMe;
 
 	private HashMap<Integer,Player> playerMap = new HashMap<>();
 	private int gameWidth, gameHeight;
 
-
-	private int fpsPlayer = 60;
-	private int fpsServer = 24;
+	protected static long timeAdjusment = 0;
+	private int fpsPlayer = 60, fpsServer = 20;
 	private boolean gameRunning = true, dead = false;
 
 	private Font gameNameFont, gameOverFont;
@@ -56,23 +56,23 @@ public class GameController extends Thread{
 		
 		
 		if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
-			communicator.notifyServer(Command.DISCONNECT, System.nanoTime());
+			communicator.notifyServer(Command.DISCONNECT);
 		}
 
 		if(me.getDirectionX() != dx || me.getDirectionY() != dy) {
 			me.move(deltaTime);
-			communicator.notifyServer(Command.MOVE, me.toString(), System.nanoTime());
+			communicator.notifyServer(Command.MOVE, me.toString(), System.nanoTime() - timeAdjusment);
 		}
 		
 		if(me.xPos <= 0 || me.xPos >= gameWidth || me.yPos <= 0 || me.yPos >= gameHeight) {
-			communicator.notifyServer(Command.DEAD, System.nanoTime());
+			communicator.notifyServer(Command.DEAD);
 			dead = true;
 		}
 	}
 
 	public void updateAll(String[] dataList) {
 		int playerID, dx, dy, xPos, yPos;
-		long lastUpdateTime, deltaTime;
+		long lastUpdateTime;
 		for(int i = 1; i < dataList.length-1; i += 6 ) {
 			playerID = Integer.valueOf(dataList[i]);
 			dx = Integer.valueOf(dataList[i+1]);
@@ -80,7 +80,6 @@ public class GameController extends Thread{
 			xPos = Integer.valueOf(dataList[i+3]);
 			yPos = Integer.valueOf(dataList[i+4]);
 			lastUpdateTime = Long.valueOf(dataList[i+5]);
-			deltaTime = System.nanoTime() - lastUpdateTime;
 			
 			Player updatedPlayer = playerMap.get(playerID);
 			updatedPlayer.update(dx, dy, xPos, yPos);
@@ -96,13 +95,14 @@ public class GameController extends Thread{
 		int playerID = Integer.valueOf(dataList[1]);
 		int xPos = Integer.valueOf(dataList[4]);
 		int yPos = Integer.valueOf(dataList[5]);
-		long lastUpdateTime = Long.valueOf(dataList[6]);
+//		long lastUpdateTime = Long.valueOf(dataList[6]);
 
 		switch(cmd) {
 		case CONNECTED:
 			me = new ClientPlayer(playerID, xPos, yPos);
-			me.setColor(Color.GREEN);
-			playerMap.put(playerID, me);
+			mirrorMe = new Player(playerID, xPos, yPos);
+			mirrorMe.setColor(Color.GREEN);
+			playerMap.put(playerID, mirrorMe);
 			this.start();
 			break;
 			
@@ -146,7 +146,7 @@ public class GameController extends Thread{
 			gameOverFont = baseFont.deriveFont(100f);
 
 		} catch (Exception e) {
-			gameNameFont = new Font("Serif", Font.PLAIN, 3);
+			gameNameFont = new Font("Serif", Font.PLAIN, 30);
 			gameOverFont = new Font("Serif", Font.PLAIN, 100);
 			e.printStackTrace();
 		}
@@ -154,8 +154,9 @@ public class GameController extends Thread{
 	
 	public void movePlayers() {
 		for(Player player : playerMap.values()) {
-			player.move(System.nanoTime() - player.lastUpdateTime);
-			player.lastUpdateTime = System.nanoTime();
+//			System.out.println(player);
+			player.move((System.nanoTime() - timeAdjusment - player.lastUpdateTime));
+			player.lastUpdateTime = System.nanoTime() - timeAdjusment;
 		}
 	}
 
@@ -178,7 +179,7 @@ public class GameController extends Thread{
 				}
 				lastServerUpdateTime = System.nanoTime();
 			}
-			else if(deltaTimeClient > delayClient) {
+			if(deltaTimeClient > delayClient) {
 				gameFrame.write("The best game ever", 10, 40, Color.YELLOW, gameNameFont);
 				if(dead) {
 					gameFrame.write("You dead lol", Color.RED, gameOverFont);

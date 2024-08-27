@@ -6,11 +6,10 @@ public class GameMain {
 	private GameController gameController;
 //	private String host = "localhost";
 	private int port = 9864;
-	private String host = "127.0.0.1";
+	private String host = "192.168.1.21";
 
 	public GameMain() {
 		//host = JOptionPane.showInputDialog("Server Adress");
-
 		try {
 			gameController = new GameController(host, port, 800, 600);
 		} catch (IOException e) {

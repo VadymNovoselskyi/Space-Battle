@@ -25,10 +25,10 @@ public class Player {
 	}
 	
 	public void move(long deltaTime) {
-//		System.out.println(dx*(deltaTime/1000000000.0)*speed);
-//		System.out.println(dy*(deltaTime/1000000000.0)*speed);
-		xPos += dx*(deltaTime/1000000000.0)*speed;
-		yPos += dy*(deltaTime/1000000000.0)*speed;
+//		System.out.println(dx*(deltaTime/1e9)*speed);
+//		System.out.println(dy*(deltaTime/1e9)*speed);
+		xPos += dx*(deltaTime/1e9)*speed;
+		yPos += dy*(deltaTime/1e9)*speed;
 	}
 
 	public void update(int health) {

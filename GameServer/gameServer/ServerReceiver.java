@@ -19,7 +19,7 @@ public class ServerReceiver implements Runnable {
     	System.out.println("Listening for messages on port: " +socket.getLocalPort());
         try {
             while (true) {
-                byte[] buffer = new byte[128];
+                byte[] buffer = new byte[64];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 socket.receive(packet);
 

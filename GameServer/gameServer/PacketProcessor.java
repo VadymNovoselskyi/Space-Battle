@@ -19,7 +19,8 @@ public class PacketProcessor implements Runnable {
 		int playerPort = packet.getPort();
 		String playerAddress = playerIP.getHostAddress() + ":" + playerPort;
 
-		System.out.println("Received from player: " + message +" Address: " +playerAddress);
+//		System.out.println("Received from player: " + message +" Address: " +playerAddress);
+		
 		if(!Server.deadPlayerMap.containsKey(playerAddress)) {
 			exeCommand(message, playerAddress);
 		} else {
@@ -68,9 +69,9 @@ public class PacketProcessor implements Runnable {
 			movedPlayer.lastUpdateTime = System.nanoTime();
 			Server.updatedPlayers.put(playerAddress, movedPlayer);
 			break;
-
-		case HIT:
-			break;
+		
+		case GET_SERVER_TIME:
+			Server.notifyClient(Command.GET_SERVER_TIME, String.valueOf(System.nanoTime()), playerAddress);
 
 		case DEAD:
 			Player deadPlayer = Server.alivePlayerMap.get(playerAddress);
