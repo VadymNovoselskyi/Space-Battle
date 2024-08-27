@@ -22,7 +22,7 @@ public class GameController extends Thread{
 
 
 	private int fpsPlayer = 30;
-	private int fpsServer = 18;
+	private int fpsServer = 12;
 	private boolean gameRunning = true, dead = false;
 
 	private Font gameNameFont, gameOverFont;
@@ -44,46 +44,30 @@ public class GameController extends Thread{
 	}
 
 	public void update(long deltaTime) {
-		boolean changed = false;
-		if(me.getDirectionX() != 0) {
-			me.setDirectionX(0);
-			changed = true;
-		}
-		if(me.getDirectionY() != 0) {
-			me.setDirectionY(0);
-			changed = true;
-		}
-		if(gameFrame.keyDown.get("right")) {
-			me.setDirectionX(1);
-			changed = true;
-		}
-		if(gameFrame.keyDown.get("left")) {
-			me.setDirectionX(-1);
-			changed = true;
-		}
-		if(gameFrame.keyDown.get("down")) {
-			me.setDirectionY(1);
-			changed = true;
-		}
-		if(gameFrame.keyDown.get("up")) {
-			me.setDirectionY(-1);
-			changed = true;
-		}
+		int dx = me.getDirectionX(), dy = me.getDirectionY();
+		
+		if(gameFrame.keyDown.get("right")) me.setDirectionX(1);
+		else if(gameFrame.keyDown.get("left")) me.setDirectionX(-1);
+		else me.setDirectionX(0);
+		
+		if(gameFrame.keyDown.get("down")) me.setDirectionY(1);
+		else if(gameFrame.keyDown.get("up")) me.setDirectionY(-1);
+		else me.setDirectionY(0);
+		
 		
 		if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
-			communicator.notifyServer(Command.DISCONNECT);
+			communicator.notifyServer(Command.DISCONNECT, System.nanoTime());
 		}
 
-		if(changed) {
+		if(me.getDirectionX() != dx || me.getDirectionY() != dy) {
 			me.move(deltaTime);
-			communicator.notifyServer(Command.MOVE, me.toString());
+			communicator.notifyServer(Command.MOVE, me.toString(), System.nanoTime());
 		}
 		
 		if(me.xPos <= 0 || me.xPos >= gameWidth || me.yPos <= 0 || me.yPos >= gameHeight) {
-			communicator.notifyServer(Command.DEAD);
+			communicator.notifyServer(Command.DEAD, System.nanoTime());
 			dead = true;
 		}
-
 	}
 
 	public void updateAll(String[] dataList) {
@@ -185,11 +169,11 @@ public class GameController extends Thread{
 				if(!dead) {
 					update(deltaTimeServer);
 				} else if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
-					communicator.notifyServer(Command.DISCONNECT);
+					communicator.notifyServer(Command.DISCONNECT, System.nanoTime());
 				}
 				lastServerUpdateTime = System.nanoTime();
 			}
-			if(deltaTimeClient > delayClient) {
+			else if(deltaTimeClient > delayClient) {
 				gameFrame.write("The best game ever", 10, 40, Color.YELLOW, gameNameFont);
 				if(dead) {
 					gameFrame.write("You dead lol", Color.RED, gameOverFont);

@@ -28,8 +28,8 @@ public class Communicator extends Thread{
 		this.start();
 	}
 
-	public void notifyServer(Command cmd, String data) {
-		data = (cmd.toString() + "," + data);
+	public void notifyServer(Command cmd, String data, long time) {
+		data = cmd.toString() + "," + data;
 		InetAddress serverAddress = null;
 		try {
 			serverAddress = InetAddress.getByName(host);
@@ -46,8 +46,8 @@ public class Communicator extends Thread{
 		}
 	}
 
-	public void notifyServer(Command cmd) {
-		notifyServer(cmd, "");
+	public void notifyServer(Command cmd, long time) {
+		notifyServer(cmd, "", time);
 	}
 
 
@@ -55,15 +55,15 @@ public class Communicator extends Thread{
 	public void run() {
 		try {
 			socket = new DatagramSocket();
-			notifyServer(Command.NEW_PLAYER);
+			notifyServer(Command.NEW_PLAYER, System.nanoTime());
 
-			byte[] receiveData = new byte[64];
+			byte[] receiveData = new byte[128];
 			while(!quit) {
 				DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 				socket.receive(receivedPacket);
 				String data = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
 				
-//				System.out.println(data);
+				System.out.println(data);
 				
 				String[] dataList = data.split(",");
 				Command cmd = Command.valueOf(dataList[0]);

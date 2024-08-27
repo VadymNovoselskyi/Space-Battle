@@ -14,7 +14,7 @@ public class Server {
 	protected static ConcurrentHashMap<String, Player> updatedPlayers = new ConcurrentHashMap<>(); 
 	
 	protected static int playerID = 1;
-	private static int fps = 18;
+	private static int fps = 12;
 
 	public static void main(String[] args) {
 		System.out.println("Server is up and running");

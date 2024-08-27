@@ -23,6 +23,22 @@ public class Player {
 		yPos += dy*(deltaTime/1000000000.0)*speed;
 	}
 
+	public void setDirectionX(int dx) {
+		this.dx = dx;
+	}
+
+	public void setDirectionY(int dy) {
+		this.dy = dy;
+	}
+
+	public int getDirectionX() {
+		return dx;
+	}
+
+	public int getDirectionY() {
+		return dy;
+	}
+
 	public void setColor(Color color) {
 		this.color = color;
 	}
@@ -55,7 +71,7 @@ public class Player {
 
 	@Override
 	public String toString() {
-		return playerID + "," + dx +"," + dy +"," + (int)xPos + "," + (int)yPos + "," + health;
+		return playerID + "," + dx + "," + dy + "," + (int)xPos + "," + (int)yPos + "," + health;
 	}
 }
 

@@ -41,15 +41,15 @@ public class PacketProcessor implements Runnable {
 
 
 			Server.notifyClient(Command.CONNECTED, newPlayer.toString(), playerAddress);
-			Server.notifyAllButThis(cmd, newPlayer.toString(), playerAddress);
-
 			if(Server.alivePlayerMap.size() > 0) {
 				String playerList = "";
 				for (Player player : Server.alivePlayerMap.values()) playerList += "," +player;
 				Server.notifyClient(Command.RECEIVE_ALL, playerList.substring(1), playerAddress);
 			}
-
+			
 			Server.alivePlayerMap.put(playerAddress, newPlayer);
+			Server.notifyAllButThis(cmd, newPlayer.toString(), playerAddress);
+
 			System.out.println("PlayerID: " + Server.playerID + " Connected to server");
 			Server.playerAddresses.put(playerAddress, Server.playerID);
 			Server.playerID++;
