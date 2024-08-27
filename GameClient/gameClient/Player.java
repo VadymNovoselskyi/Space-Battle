@@ -1,21 +1,25 @@
 package gameClient;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.geom.AffineTransform;
 
 public class Player {
 	protected int playerID;
 	protected double xPos, yPos;
 	private int dx = 0, dy = 0;
-	protected int speed = 70;
+	protected static int speed = 70;
+//	private static double rotationSpeed = Math.PI / 2;
 	protected long lastUpdateTime = 0;
 //	protected int health;
-	private Color color = Color.RED;
+	private Image img;
+	private double angle = 0; // Angle of rotation in radians --> is 0; <-- is pi
 
-	public Player(int playerID, int xPos, int yPos) {
+	public Player(int playerID, int xPos, int yPos, Image img) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
+		this.img = img;
 //		this.health = health;
 	}
 	
@@ -42,10 +46,6 @@ public class Player {
 		return dy;
 	}
 
-	public void setColor(Color color) {
-		this.color = color;
-	}
-
 	public void update(int health) {
 //		this.health = health;
 	}
@@ -68,13 +68,29 @@ public class Player {
 	}
 
 	public void draw(Graphics2D g) {
-		g.setColor(color);
-		g.fillRect((int)xPos, (int)yPos, 32, 32);
+	    AffineTransform old = g.getTransform();
+	    if(dx == 0 && dy == 0) angle = 0;
+	    else angle = Math.atan2(dy, dx) + Math.PI / 2;
+
+	    // Translate to the center of the player image for rotation
+	    g.translate(xPos + img.getWidth(null) / 2, yPos + img.getHeight(null) / 2);
+	    g.rotate(angle);
+
+	    // Draw the image, centered on the translation point
+	    g.drawImage(img, -img.getWidth(null) / 2, -img.getHeight(null) / 2, null);
+
+	    // Restore the old transform
+	    g.setTransform(old);
 	}
 
 	@Override
 	public String toString() {
 		return playerID + "," + dx + "," + dy + "," + (int)xPos + "," + (int)yPos;
+	}
+
+	
+	public void setAngle(double angle) {
+	    this.angle = angle;
 	}
 }
 

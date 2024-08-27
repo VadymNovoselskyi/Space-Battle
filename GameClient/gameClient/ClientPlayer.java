@@ -1,8 +1,10 @@
 package gameClient;
 
+import java.awt.Image;
+
 public class ClientPlayer extends Player {
-	public ClientPlayer(int playerID, int xPos, int yPos) {
-		super(playerID, xPos, yPos);
+	public ClientPlayer(int playerID, int xPos, int yPos, Image img) {
+		super(playerID, xPos, yPos, img);
 	}
 	
 	public void move(long deltaTime) {

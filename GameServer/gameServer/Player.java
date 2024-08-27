@@ -5,7 +5,9 @@ import java.awt.Rectangle;
 public class Player {
 	private int playerID;
 	private double xPos, yPos;
-	private int dx = 0, dy = 0, speed = 70;
+	private int dx = 0, dy = 0;
+	private static int speed = 70;
+	private double angle = 0;
 	protected long lastUpdateTime;
 //	private int health;
 	private boolean isDead = false;
@@ -13,7 +15,7 @@ public class Player {
 	private Rectangle area;
 
 	public Player(int playerID, int xPos, int yPos) {
-		this(playerID, xPos, yPos, new Rectangle(xPos,yPos, 32, 32));
+		this(playerID, xPos, yPos, new Rectangle(xPos,yPos, 42, 84));
 	}
 
 	public Player(int playerID, int xPos, int yPos, Rectangle area) {

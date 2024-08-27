@@ -88,7 +88,7 @@ public class Communicator extends Thread{
 		try {
 			socket = new DatagramSocket();
 			GameController.timeAdjusment = getAdjustment() - getLatency();
-			System.out.println(GameController.timeAdjusment);
+//			System.out.println(GameController.timeAdjusment);
 			notifyServer(Command.NEW_PLAYER, System.nanoTime() + GameController.timeAdjusment);
 
 			byte[] receiveData = new byte[128];

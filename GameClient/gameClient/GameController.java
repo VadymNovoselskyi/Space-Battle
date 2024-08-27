@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.HashMap;
-
 import javax.swing.ImageIcon;
 
 import gameServer.Command;
@@ -17,12 +16,13 @@ public class GameController extends Thread{
 	private Communicator communicator;
 	private ClientPlayer me;
 	private Player mirrorMe;
+	private Image meImg, enemyImg;
 
 	private HashMap<Integer,Player> playerMap = new HashMap<>();
 	private int gameWidth, gameHeight;
 
 	protected static long timeAdjusment = 0;
-	private int fpsPlayer = 60, fpsServer = 20;
+	private int fpsPlayer = 60, fpsServer = 12;
 	private boolean gameRunning = true, dead = false;
 
 	private Font gameNameFont, gameOverFont;
@@ -34,9 +34,9 @@ public class GameController extends Thread{
 		this.gameWidth = gameWidth;
 		this.gameHeight = gameHeight;
 		gameFrame = new GameFrame(gameWidth, gameHeight);
-		communicator = new Communicator(this, host, port);
+		loadImages();
 		loadFonts();
-		loadScene();
+		communicator = new Communicator(this, host, port);
 	}
 
 	public void closeConnection(){
@@ -45,16 +45,16 @@ public class GameController extends Thread{
 
 	public void update(long deltaTime) {
 		int dx = me.getDirectionX(), dy = me.getDirectionY();
-		
+
 		if(gameFrame.keyDown.get("right")) me.setDirectionX(1);
 		else if(gameFrame.keyDown.get("left")) me.setDirectionX(-1);
 		else me.setDirectionX(0);
-		
+
 		if(gameFrame.keyDown.get("down")) me.setDirectionY(1);
 		else if(gameFrame.keyDown.get("up")) me.setDirectionY(-1);
 		else me.setDirectionY(0);
-		
-		
+
+
 		if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
 			communicator.notifyServer(Command.DISCONNECT);
 		}
@@ -63,8 +63,8 @@ public class GameController extends Thread{
 			me.move(deltaTime);
 			communicator.notifyServer(Command.MOVE, me.toString(), System.nanoTime() - timeAdjusment);
 		}
-		
-		if(me.xPos <= 0 || me.xPos >= gameWidth || me.yPos <= 0 || me.yPos >= gameHeight) {
+
+		if(mirrorMe.xPos <= 0 || mirrorMe.xPos >= gameWidth || mirrorMe.yPos <= 0 || mirrorMe.yPos >= gameHeight) {
 			communicator.notifyServer(Command.DEAD);
 			dead = true;
 		}
@@ -80,11 +80,13 @@ public class GameController extends Thread{
 			xPos = Integer.valueOf(dataList[i+3]);
 			yPos = Integer.valueOf(dataList[i+4]);
 			lastUpdateTime = Long.valueOf(dataList[i+5]);
-			
+
 			Player updatedPlayer = playerMap.get(playerID);
-			updatedPlayer.update(dx, dy, xPos, yPos);
-			updatedPlayer.lastUpdateTime = lastUpdateTime;
-			
+
+			if (updatedPlayer != null) {
+				updatedPlayer.update(dx, dy, xPos, yPos);
+				updatedPlayer.lastUpdateTime = lastUpdateTime;
+			}
 		}
 
 	}
@@ -95,29 +97,28 @@ public class GameController extends Thread{
 		int playerID = Integer.valueOf(dataList[1]);
 		int xPos = Integer.valueOf(dataList[4]);
 		int yPos = Integer.valueOf(dataList[5]);
-//		long lastUpdateTime = Long.valueOf(dataList[6]);
+		//		long lastUpdateTime = Long.valueOf(dataList[6]);
 
 		switch(cmd) {
 		case CONNECTED:
-			me = new ClientPlayer(playerID, xPos, yPos);
-			mirrorMe = new Player(playerID, xPos, yPos);
-			mirrorMe.setColor(Color.GREEN);
+			me = new ClientPlayer(playerID, xPos, yPos, meImg);
+			mirrorMe = new Player(playerID, xPos, yPos, meImg);
 			playerMap.put(playerID, mirrorMe);
 			this.start();
 			break;
-			
+
 		case RECEIVE_ALL:
 			for(int i = 1; i < dataList.length-1; i += 6 ) {
 				playerID = Integer.valueOf(dataList[i]);
 				xPos = Integer.valueOf(dataList[i+3]);
 				yPos = Integer.valueOf(dataList[i+4]);
 
-				playerMap.put(playerID, new Player(playerID,xPos, yPos));
+				playerMap.put(playerID, new Player(playerID,xPos, yPos, enemyImg));
 			}
 			break;
 
 		case NEW_PLAYER:
-			playerMap.put(playerID, new Player(playerID,xPos, yPos));
+			playerMap.put(playerID, new Player(playerID,xPos, yPos, enemyImg));
 			break;
 
 		case REMOVE:
@@ -131,9 +132,14 @@ public class GameController extends Thread{
 		}
 	}
 
-	public void loadScene() {
+	public void loadImages() {
+		meImg = new ImageIcon(getClass().getResource("/ship_yellow.png")).getImage();
+		enemyImg = new ImageIcon(getClass().getResource("/ship_red.png")).getImage();
+		
 		Image background = new ImageIcon(getClass().getResource("/background.jpg")).getImage();
 		gameFrame.setBackground(background);
+
+
 	}
 
 	public void loadFonts() {
@@ -151,10 +157,10 @@ public class GameController extends Thread{
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void movePlayers() {
 		for(Player player : playerMap.values()) {
-//			System.out.println(player);
+			//			System.out.println(player);
 			player.move((System.nanoTime() - timeAdjusment - player.lastUpdateTime));
 			player.lastUpdateTime = System.nanoTime() - timeAdjusment;
 		}
