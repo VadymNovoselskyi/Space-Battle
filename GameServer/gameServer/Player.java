@@ -5,26 +5,34 @@ import java.awt.Rectangle;
 public class Player {
 	private int playerID;
 	private double xPos, yPos;
-	private int dx = 0, dy = 0;
-	private int health;
+	private int dx = 0, dy = 0, speed = 70;
+	protected long lastUpdateTime;
+//	private int health;
 	private boolean isDead = false;
 
 	private Rectangle area;
 
-	public Player(int playerID, int xPos, int yPos,int health) {
-		this(playerID, xPos, yPos, health, new Rectangle(xPos,yPos, 32, 32));
+	public Player(int playerID, int xPos, int yPos) {
+		this(playerID, xPos, yPos, new Rectangle(xPos,yPos, 32, 32));
 	}
 
-	public Player(int playerID, int xPos, int yPos, int health, Rectangle area) {
+	public Player(int playerID, int xPos, int yPos, Rectangle area) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
-		this.health = health;
+//		this.health = health;
 		this.area = area;
+	}
+	
+	public void move(long deltaTime) {
+//		System.out.println(dx*(deltaTime/1000000000.0)*speed);
+//		System.out.println(dy*(deltaTime/1000000000.0)*speed);
+		xPos += dx*(deltaTime/1000000000.0)*speed;
+		yPos += dy*(deltaTime/1000000000.0)*speed;
 	}
 
 	public void update(int health) {
-		this.health = health;
+//		this.health = health;
 	}
 
 	public void update(int xPos, int yPos) {
@@ -44,6 +52,22 @@ public class Player {
 	public void update(int xPos, int yPos, int health) {
 		this.update(health);
 		this.update(xPos, yPos);
+	}
+
+	public int getDx() {
+		return dx;
+	}
+
+	public int getDy() {
+		return dy;
+	}
+
+	public void setDx(int dx) {
+		this.dx = dx;
+	}
+
+	public void setDy(int dy) {
+		this.dy = dy;
 	}
 
 	public Rectangle getArea(){
@@ -68,6 +92,6 @@ public class Player {
 
 	@Override
 	public String toString() {
-		return playerID + "," + dx +"," + dy + "," + (int)xPos + "," + (int)yPos + "," + health;
+		return playerID + "," + dx +"," + dy + "," + (int)xPos + "," + (int)yPos + "," + lastUpdateTime;
 	}
 }

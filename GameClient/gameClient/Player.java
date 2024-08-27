@@ -8,14 +8,15 @@ public class Player {
 	protected double xPos, yPos;
 	private int dx = 0, dy = 0;
 	protected int speed = 70;
-	protected int health;
+	protected long lastUpdateTime = 0;
+//	protected int health;
 	private Color color = Color.RED;
 
-	public Player(int playerID, int xPos, int yPos, int health) {
+	public Player(int playerID, int xPos, int yPos) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
-		this.health = health;
+//		this.health = health;
 	}
 	
 	public void move(long deltaTime) {
@@ -44,7 +45,7 @@ public class Player {
 	}
 
 	public void update(int health) {
-		this.health = health;
+//		this.health = health;
 	}
 
 	public void update(int xPos, int yPos) {
@@ -71,7 +72,7 @@ public class Player {
 
 	@Override
 	public String toString() {
-		return playerID + "," + dx + "," + dy + "," + (int)xPos + "," + (int)yPos + "," + health;
+		return playerID + "," + dx + "," + dy + "," + (int)xPos + "," + (int)yPos;
 	}
 }
 

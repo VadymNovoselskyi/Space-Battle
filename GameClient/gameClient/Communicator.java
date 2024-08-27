@@ -29,7 +29,7 @@ public class Communicator extends Thread{
 	}
 
 	public void notifyServer(Command cmd, String data, long time) {
-		data = cmd.toString() + "," + data;
+		data = cmd.toString() + "," + data + "," + time;
 		InetAddress serverAddress = null;
 		try {
 			serverAddress = InetAddress.getByName(host);
@@ -45,9 +45,23 @@ public class Communicator extends Thread{
 			e.printStackTrace();
 		}
 	}
-
 	public void notifyServer(Command cmd, long time) {
-		notifyServer(cmd, "", time);
+		String data = cmd.toString() + "," + time;
+		InetAddress serverAddress = null;
+		try {
+			serverAddress = InetAddress.getByName(host);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+
+		byte[] sendData = data.getBytes();
+		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, port);
+		try {
+			socket.send(sendPacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 

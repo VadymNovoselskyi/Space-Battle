@@ -1,8 +1,8 @@
 package gameClient;
 
 public class ClientPlayer extends Player {
-	public ClientPlayer(int playerID, int xPos, int yPos, int health) {
-		super(playerID, xPos, yPos, health);
+	public ClientPlayer(int playerID, int xPos, int yPos) {
+		super(playerID, xPos, yPos);
 	}
 	
 	public void move(long deltaTime) {

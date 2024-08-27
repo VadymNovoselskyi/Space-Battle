@@ -21,8 +21,8 @@ public class GameController extends Thread{
 	private int gameWidth, gameHeight;
 
 
-	private int fpsPlayer = 30;
-	private int fpsServer = 12;
+	private int fpsPlayer = 60;
+	private int fpsServer = 24;
 	private boolean gameRunning = true, dead = false;
 
 	private Font gameNameFont, gameOverFont;
@@ -71,16 +71,21 @@ public class GameController extends Thread{
 	}
 
 	public void updateAll(String[] dataList) {
-		int playerID, dx, dy, xPos, yPos, health; 
+		int playerID, dx, dy, xPos, yPos;
+		long lastUpdateTime, deltaTime;
 		for(int i = 1; i < dataList.length-1; i += 6 ) {
 			playerID = Integer.valueOf(dataList[i]);
 			dx = Integer.valueOf(dataList[i+1]);
 			dy = Integer.valueOf(dataList[i+2]);
 			xPos = Integer.valueOf(dataList[i+3]);
 			yPos = Integer.valueOf(dataList[i+4]);
-			health = Integer.valueOf(dataList[i+5]);
+			lastUpdateTime = Long.valueOf(dataList[i+5]);
+			deltaTime = System.nanoTime() - lastUpdateTime;
 			
-			playerMap.get(playerID).update(dx, dy, xPos, yPos);
+			Player updatedPlayer = playerMap.get(playerID);
+			updatedPlayer.update(dx, dy, xPos, yPos);
+			updatedPlayer.lastUpdateTime = lastUpdateTime;
+			
 		}
 
 	}
@@ -91,11 +96,11 @@ public class GameController extends Thread{
 		int playerID = Integer.valueOf(dataList[1]);
 		int xPos = Integer.valueOf(dataList[4]);
 		int yPos = Integer.valueOf(dataList[5]);
-		int health = Integer.valueOf(dataList[6]);
+		long lastUpdateTime = Long.valueOf(dataList[6]);
 
 		switch(cmd) {
 		case CONNECTED:
-			me = new ClientPlayer(playerID, xPos, yPos, health);
+			me = new ClientPlayer(playerID, xPos, yPos);
 			me.setColor(Color.GREEN);
 			playerMap.put(playerID, me);
 			this.start();
@@ -106,14 +111,13 @@ public class GameController extends Thread{
 				playerID = Integer.valueOf(dataList[i]);
 				xPos = Integer.valueOf(dataList[i+3]);
 				yPos = Integer.valueOf(dataList[i+4]);
-				health = Integer.valueOf(dataList[i+5]);
 
-				playerMap.put(playerID, new Player(playerID,xPos, yPos,health));
+				playerMap.put(playerID, new Player(playerID,xPos, yPos));
 			}
 			break;
 
 		case NEW_PLAYER:
-			playerMap.put(playerID, new Player(playerID,xPos, yPos,health));
+			playerMap.put(playerID, new Player(playerID,xPos, yPos));
 			break;
 
 		case REMOVE:
@@ -148,9 +152,10 @@ public class GameController extends Thread{
 		}
 	}
 	
-	public void movePlayers(long deltaTime) {
+	public void movePlayers() {
 		for(Player player : playerMap.values()) {
-			player.move(deltaTime);
+			player.move(System.nanoTime() - player.lastUpdateTime);
+			player.lastUpdateTime = System.nanoTime();
 		}
 	}
 
@@ -178,7 +183,7 @@ public class GameController extends Thread{
 				if(dead) {
 					gameFrame.write("You dead lol", Color.RED, gameOverFont);
 				}
-				movePlayers(deltaTimeClient);
+				movePlayers();
 				gameFrame.render(playerMap);
 				lastPlayerUpdateTime = System.nanoTime();
 			}

@@ -37,8 +37,8 @@ public class PacketProcessor implements Runnable {
 
 		switch(cmd) {
 		case NEW_PLAYER:
-			Player newPlayer = new Player(Server.playerID, (int)(Math.random()*700), (int)(Math.random()*500), 10);
-
+			Player newPlayer = new Player(Server.playerID, (int)(Math.random()*700), (int)(Math.random()*500));
+			newPlayer.lastUpdateTime = Long.valueOf(dataList[1]);
 
 			Server.notifyClient(Command.CONNECTED, newPlayer.toString(), playerAddress);
 			if(Server.alivePlayerMap.size() > 0) {
@@ -58,11 +58,14 @@ public class PacketProcessor implements Runnable {
 		case MOVE:
 			int dx = Integer.valueOf(dataList[2]);
 			int dy = Integer.valueOf(dataList[3]);
-			int xPos = Integer.valueOf(dataList[4]);
-			int yPos = Integer.valueOf(dataList[5]);
+			long updateTime = Long.valueOf(dataList[6]);
 
 			Player movedPlayer = Server.alivePlayerMap.get(playerAddress);
-			movedPlayer.update(dx, dy, xPos, yPos);
+			movedPlayer.move(updateTime - movedPlayer.lastUpdateTime);
+			movedPlayer.setDx(dx);
+			movedPlayer.setDy(dy);
+			movedPlayer.move(System.nanoTime() - updateTime);
+			movedPlayer.lastUpdateTime = System.nanoTime();
 			Server.updatedPlayers.put(playerAddress, movedPlayer);
 			break;
 
@@ -104,5 +107,4 @@ public class PacketProcessor implements Runnable {
 		Server.playerAddresses.remove(playerAddress);
 		System.out.println("Disconnecting " +player.getID());
 	}
-
 }

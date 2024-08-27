@@ -16,7 +16,8 @@ public class ServerSender {
 		this.socket = socket;
 		this.executor = Executors.newFixedThreadPool(4); // Adjust the pool size based on your needs
 	}
-
+	
+	
 	public void updatePlayers(ConcurrentHashMap<String, Player> updatedPlayers, String address) {		
 		String playerList = "";
 		for(Player player : updatedPlayers.values()) {
