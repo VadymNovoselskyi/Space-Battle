@@ -22,7 +22,7 @@ public class GameController extends Thread{
 	private int gameWidth, gameHeight;
 
 	protected static long timeAdjusment = 0;
-	private int fpsPlayer = 60, fpsServer = 12;
+	protected static int fpsPlayer = 60, fpsServer = 12;
 	private boolean gameRunning = true, dead = false;
 
 	private Font gameNameFont, gameOverFont;
@@ -86,6 +86,11 @@ public class GameController extends Thread{
 			if (updatedPlayer != null) {
 				updatedPlayer.update(dx, dy, xPos, yPos);
 				updatedPlayer.lastUpdateTime = lastUpdateTime;
+
+				double angle; 
+			    if(dx == 0 && dy == 0) angle = 0;
+			    else angle = Math.atan2(dy, dx) + Math.PI / 2;
+			    updatedPlayer.setSupposedAngle(angle);
 			}
 		}
 

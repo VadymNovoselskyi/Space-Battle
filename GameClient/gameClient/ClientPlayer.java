@@ -8,8 +8,8 @@ public class ClientPlayer extends Player {
 	}
 	
 	public void move(long deltaTime) {
-		xPos += super.getDirectionX()*(deltaTime/1000000000.0)*speed;
-		yPos += super.getDirectionY()*(deltaTime/1000000000.0)*speed;
+		xPos += super.getDirectionX()*(deltaTime/1000000000.0)*super.getSpeed();
+		yPos += super.getDirectionY()*(deltaTime/1000000000.0)*super.getSpeed();
 	}
 }
 
