@@ -6,7 +6,8 @@ import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+
 import javax.swing.ImageIcon;
 
 import gameServer.Command;
@@ -16,23 +17,23 @@ public class GameController extends Thread{
 	private Communicator communicator;
 	private ClientPlayer me;
 	private Player mirrorMe;
-	private Image meImg, enemyImg;
-
-	private HashMap<Integer,Player> playerMap = new HashMap<>();
-	private int gameWidth, gameHeight;
-
-	protected static long timeAdjusment = 0;
-	protected static int fpsPlayer = 60, fpsServer = 12;
-	private boolean gameRunning = true, dead = false;
-
+	private Image meImg, enemyImg, laserImg, missileImg;
 	private Font gameNameFont, gameOverFont;
 
+	private ConcurrentHashMap<Integer,Player> playerMap = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<Integer, Projectile> projectileMap = new ConcurrentHashMap<>();
+	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
+
+	protected static long timeAdjusment = 0;
+	protected static final int FPS_PLAYER = 60, FPS_SERVER = 12;
+	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
+
+	private boolean gameRunning = true, dead = false;
+
 	public GameController(String host, int port) throws IOException {
-		this(host, port, 800, 600);
+		this(host, port, GAME_WIDTH, GAME_HEIGHT);
 	}
 	public GameController(String host, int port, int gameWidth, int gameHeight) throws IOException {
-		this.gameWidth = gameWidth;
-		this.gameHeight = gameHeight;
 		gameFrame = new GameFrame(gameWidth, gameHeight);
 		loadImages();
 		loadFonts();
@@ -54,20 +55,29 @@ public class GameController extends Thread{
 		else if(gameFrame.keyDown.get("up")) me.setDirectionY(-1);
 		else me.setDirectionY(0);
 
-
-		if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
-			communicator.notifyServer(Command.DISCONNECT);
-		}
-
 		if(me.getDirectionX() != dx || me.getDirectionY() != dy) {
 			me.move(deltaTime);
 			communicator.notifyServer(Command.MOVE, me.toString(), System.nanoTime() - timeAdjusment);
 		}
 
-		if(mirrorMe.xPos <= 0 || mirrorMe.xPos >= gameWidth || mirrorMe.yPos <= 0 || mirrorMe.yPos >= gameHeight) {
+		if(gameFrame.keyDown.get("space")) {
+			String cmdString = me.tryToFire();
+			if(cmdString != null) {
+				Command cmd = Command.valueOf(cmdString);
+				communicator.notifyServer(cmd, me.toString(), System.nanoTime() - timeAdjusment);
+			}
+		}
+
+		if(mirrorMe.borderCollision()) {
 			communicator.notifyServer(Command.DEAD);
 			dead = true;
 		}
+
+		if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
+			communicator.notifyServer(Command.DISCONNECT);
+		}
+
+
 	}
 
 	public void updateAll(String[] dataList) {
@@ -88,9 +98,9 @@ public class GameController extends Thread{
 				updatedPlayer.lastUpdateTime = lastUpdateTime;
 
 				double angle; 
-			    if(dx == 0 && dy == 0) angle = 0;
-			    else angle = Math.atan2(dy, dx) + Math.PI / 2;
-			    updatedPlayer.setSupposedAngle(angle);
+				if(dx == 0 && dy == 0) angle = 0;
+				else angle = Math.atan2(dy, dx) + Math.PI / 2;
+				updatedPlayer.setSupposedAngle(angle);
 			}
 		}
 
@@ -100,11 +110,37 @@ public class GameController extends Thread{
 
 		Command cmd = Command.valueOf(dataList[0]);
 		int playerID = Integer.valueOf(dataList[1]);
+		int dx = Integer.valueOf(dataList[2]);
+		int dy = Integer.valueOf(dataList[3]);
 		int xPos = Integer.valueOf(dataList[4]);
 		int yPos = Integer.valueOf(dataList[5]);
 		//		long lastUpdateTime = Long.valueOf(dataList[6]);
 
 		switch(cmd) {
+		case LASER_FIRED: {			
+			int projectileID = Integer.valueOf(dataList[6]);
+			long lastUpdateTime = Long.valueOf(dataList[7]);
+			Laser newLaser = new Laser(laserImg, xPos, yPos, dx, dy, projectileID);
+			projectileMap.put(projectileID, newLaser);
+			newLaser.lastUpdateTime = lastUpdateTime;
+			break;
+		}
+
+		case MISSILE_FIRED: {
+			int projectileID = Integer.valueOf(dataList[6]);
+			long lastUpdateTime = Long.valueOf(dataList[7]);
+			Missile newMissile =new Missile(missileImg, xPos, yPos, dx, dy, projectileID);
+			projectileMap.put(projectileID, newMissile);
+			newMissile.lastUpdateTime = lastUpdateTime;
+			break;			
+		}
+
+		case HIT:
+			int projectileID = Integer.valueOf(dataList[6]);
+			projectileMap.remove(projectileID);
+			break;
+
+
 		case CONNECTED:
 			me = new ClientPlayer(playerID, xPos, yPos, meImg);
 			mirrorMe = new Player(playerID, xPos, yPos, meImg);
@@ -140,11 +176,11 @@ public class GameController extends Thread{
 	public void loadImages() {
 		meImg = new ImageIcon(getClass().getResource("/ship_yellow.png")).getImage();
 		enemyImg = new ImageIcon(getClass().getResource("/ship_red.png")).getImage();
-		
+		laserImg = new ImageIcon(getClass().getResource("/laser.png")).getImage();
+		missileImg = new ImageIcon(getClass().getResource("/missile.png")).getImage();
+
 		Image background = new ImageIcon(getClass().getResource("/background.jpg")).getImage();
 		gameFrame.setBackground(background);
-
-
 	}
 
 	public void loadFonts() {
@@ -165,19 +201,42 @@ public class GameController extends Thread{
 
 	public void movePlayers() {
 		for(Player player : playerMap.values()) {
-			//			System.out.println(player);
 			player.move((System.nanoTime() - timeAdjusment - player.lastUpdateTime));
 			player.lastUpdateTime = System.nanoTime() - timeAdjusment;
+		}
+	}
+	public void moveProjectiles() {
+		for(Projectile projectile : projectileMap.values()) {
+			projectile.move(System.nanoTime() - timeAdjusment - projectile.lastUpdateTime);
+			projectile.lastUpdateTime = System.nanoTime() - timeAdjusment;
+		}
+	}
+
+
+	public void checkCollisions() {
+		for(Player player : playerMap.values()) {
+			if(player != mirrorMe) {
+				if(mirrorMe.collision(player)) {
+					//					System.out.println("Collision!!!");
+				}
+			}
+		}
+		for(Projectile projectile : projectileMap.values()) {
+			if(mirrorMe.collision(projectile)) {
+
+			}
 		}
 	}
 
 	@Override
 	public void run() {
 		long lastPlayerUpdateTime = System.nanoTime();
-		double delayClient = 1e9 / fpsPlayer;
+		double delayClient = 1e9 / FPS_PLAYER;
 		long lastServerUpdateTime = System.nanoTime();
-		double delayServer = 1e9 / fpsServer;
+		double delayServer = 1e9 / FPS_SERVER;
 
+		//		long time = System.nanoTime();
+		//		int countServer = 0, countPlayer = 0;
 		while(gameRunning) {
 			long deltaTimeClient = System.nanoTime() - lastPlayerUpdateTime;
 			long deltaTimeServer = System.nanoTime() - lastServerUpdateTime;
@@ -189,6 +248,7 @@ public class GameController extends Thread{
 					communicator.notifyServer(Command.DISCONNECT, System.nanoTime());
 				}
 				lastServerUpdateTime = System.nanoTime();
+				//				countServer++;
 			}
 			if(deltaTimeClient > delayClient) {
 				gameFrame.write("The best game ever", 10, 40, Color.YELLOW, gameNameFont);
@@ -196,8 +256,12 @@ public class GameController extends Thread{
 					gameFrame.write("You dead lol", Color.RED, gameOverFont);
 				}
 				movePlayers();
+				moveProjectiles();
+				//				checkCollisions();
+				gameFrame.renderProjectiles(projectileMap);
 				gameFrame.render(playerMap);
 				lastPlayerUpdateTime = System.nanoTime();
+				//				countPlayer++;
 			}
 
 			else {
@@ -206,6 +270,8 @@ public class GameController extends Thread{
 				} catch (InterruptedException e) {}
 			}
 		}
+		//		time = System.nanoTime() - time;
+		//		System.out.println(countPlayer / (time / 1e9) +" -- " + countServer / (time / 1e9));
 	}
 }
 

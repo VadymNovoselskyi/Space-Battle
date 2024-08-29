@@ -11,6 +11,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferStrategy;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.JFrame;
 
@@ -39,6 +40,7 @@ public class GameFrame extends JFrame implements KeyListener{
 		keyDown.put("down", false);
 		keyDown.put("esc", false);
 		keyDown.put("q", false);
+		keyDown.put("space", false);
 	}
 
 	public void createWindow() {
@@ -56,34 +58,41 @@ public class GameFrame extends JFrame implements KeyListener{
 		backBuffer = gameCanvas.getBufferStrategy();
 	}
 
-	public synchronized void render(HashMap<Integer, Player> playerMap) {
+	public synchronized void render(ConcurrentHashMap<Integer, Player> playerMap) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
 		for (Player player : playerMap.values()) {
 			player.draw(g);
 		}
 		backBuffer.show();
 	}
-    public void write(String text, int x, int y, Color color, Font font) {
-        Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
+	public synchronized void renderProjectiles(ConcurrentHashMap<Integer, Projectile> projectileMap) {
+		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
+		for (Projectile player : projectileMap.values()) {
+			player.draw(g);
+		}
+	}
+	
+	public void write(String text, int x, int y, Color color, Font font) {
+		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
 		g.setColor(Color.BLACK);
 		g.fillRect(0, 0, width, height);
 		g.drawImage(background, 0, 0, width, height, gameCanvas);
 
-        g.setFont(font);
-        g.setColor(color);
-        g.drawString(text, x, y);
-    }
-    public void write(String text, Color color, Font font) {
-        Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
-        g.setFont(font);
-        g.setColor(color);
-        FontMetrics fontMetrics = g.getFontMetrics(font);
-        int x = (width - fontMetrics.stringWidth(text)) / 2;
-        int y = ((height - fontMetrics.getHeight()) / 2) + fontMetrics.getAscent();
+		g.setFont(font);
+		g.setColor(color);
+		g.drawString(text, x, y);
+	}
+	public void write(String text, Color color, Font font) {
+		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
+		g.setFont(font);
+		g.setColor(color);
+		FontMetrics fontMetrics = g.getFontMetrics(font);
+		int x = (width - fontMetrics.stringWidth(text)) / 2;
+		int y = ((height - fontMetrics.getHeight()) / 2) + fontMetrics.getAscent();
 
-        g.drawString(text, x, y);
-        g.dispose();
-    }
+		g.drawString(text, x, y);
+		g.dispose();
+	}
 
 	@Override
 	public void keyPressed(KeyEvent e) {
@@ -101,6 +110,8 @@ public class GameFrame extends JFrame implements KeyListener{
 			keyDown.put("esc", true);
 		} else if(key == KeyEvent.VK_Q) {
 			keyDown.put("q", true);
+		} else if(key == KeyEvent.VK_SPACE) {
+			keyDown.put("space", true);
 		}
 	}
 
@@ -116,6 +127,8 @@ public class GameFrame extends JFrame implements KeyListener{
 			keyDown.put("up", false);
 		} else if(key == KeyEvent.VK_DOWN) {
 			keyDown.put("down", false);
+		} else if(key == KeyEvent.VK_SPACE) {
+			keyDown.put("space", false);
 		}
 	}
 

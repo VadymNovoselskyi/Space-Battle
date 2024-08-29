@@ -3,6 +3,7 @@ package gameServer;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 
+
 public class PacketProcessor implements Runnable {
 	private DatagramPacket packet;
 
@@ -21,7 +22,7 @@ public class PacketProcessor implements Runnable {
 
 //		System.out.println("Received from player: " + message +" Address: " +playerAddress);
 		
-		if(!Server.deadPlayerMap.containsKey(playerAddress)) {
+		if(!Server.deadPlayersMap.containsKey(playerAddress)) {
 			exeCommand(message, playerAddress);
 		} else {
 			String[] dataList = message.split(",");
@@ -38,30 +39,30 @@ public class PacketProcessor implements Runnable {
 
 		switch(cmd) {
 		case NEW_PLAYER:
-			Player newPlayer = new Player(Server.playerID, (int)(Math.random()*700), (int)(Math.random()*500));
+			Player newPlayer = new Player(Server.playerID, (int)(Math.random()*500 + 150), (int)(Math.random()*400 + 100));
+			System.out.println("PlayerID: " + Server.playerID + " Connected to server");
+			Server.playerID++;
 			newPlayer.lastUpdateTime = Long.valueOf(dataList[1]);
+			newPlayer.setPlayerAddress(playerAddress);
 
 			Server.notifyClient(Command.CONNECTED, newPlayer.toString(), playerAddress);
-			if(Server.alivePlayerMap.size() > 0) {
+			if(Server.alivePlayersMap.size() > 0) {
 				String playerList = "";
-				for (Player player : Server.alivePlayerMap.values()) playerList += "," +player;
+				for (Player player : Server.alivePlayersMap.values()) playerList += "," +player;
 				Server.notifyClient(Command.RECEIVE_ALL, playerList.substring(1), playerAddress);
 			}
 			
-			Server.alivePlayerMap.put(playerAddress, newPlayer);
-			Server.notifyAllButThis(cmd, newPlayer.toString(), playerAddress);
-
-			System.out.println("PlayerID: " + Server.playerID + " Connected to server");
+			Server.alivePlayersMap.put(playerAddress, newPlayer);
 			Server.playerAddresses.put(playerAddress, Server.playerID);
-			Server.playerID++;
+			Server.notifyAllButThis(cmd, newPlayer.toString(), playerAddress);
 			break;
 
-		case MOVE:
+		case MOVE: {			
 			int dx = Integer.valueOf(dataList[2]);
 			int dy = Integer.valueOf(dataList[3]);
 			long updateTime = Long.valueOf(dataList[6]);
-
-			Player movedPlayer = Server.alivePlayerMap.get(playerAddress);
+			
+			Player movedPlayer = Server.alivePlayersMap.get(playerAddress);
 			movedPlayer.move(updateTime - movedPlayer.lastUpdateTime);
 			movedPlayer.setDx(dx);
 			movedPlayer.setDy(dy);
@@ -69,14 +70,74 @@ public class PacketProcessor implements Runnable {
 			movedPlayer.lastUpdateTime = System.nanoTime();
 			Server.updatedPlayers.put(playerAddress, movedPlayer);
 			break;
+		}
+			
+		case FIRE_LASER: {
+			int playerID = Integer.valueOf(dataList[1]);
+			int dx = Integer.valueOf(dataList[2]);
+			int dy = Integer.valueOf(dataList[3]);
+			long updateTime = Long.valueOf(dataList[6]);
+			
+			Player firedPlayer = Server.alivePlayersMap.get(playerAddress);;
+			firedPlayer.move(updateTime - firedPlayer.lastUpdateTime);
+			firedPlayer.setDx(dx);
+			firedPlayer.setDy(dy);
+			firedPlayer.move(System.nanoTime() - updateTime);
+			firedPlayer.lastUpdateTime = System.nanoTime();
+			
+			double angle; 
+			if (dx == 0 && dy == 0) {
+				angle = 0;
+			} else {
+				angle = Math.atan2(dy, dx) + Math.PI / 2;
+			}
+			
+			double x = firedPlayer.getxPos()+ Player.HITBOX_WIDTH / 2 - Math.sin(angle) * (-Player.HITBOX_HEIGHT / 2);
+			double y = firedPlayer.getyPos() + Player.HITBOX_HEIGHT / 2 + Math.cos(angle) * (-Player.HITBOX_HEIGHT / 2);
+			Laser newLaser = new Laser(x - Laser.WIDTH / 2, y - Laser.HEIGHT / 2, dx, dy, playerID, Server.projectileID++);
+			Server.projectilesList.add(newLaser);
+			
+			Server.notifyAllClients(Command.LASER_FIRED, newLaser.toString());
+			break;			
+		}
+			
+		case FIRE_MISSILE: {			
+			int playerID = Integer.valueOf(dataList[1]);
+			int dx = Integer.valueOf(dataList[2]);
+			int dy = Integer.valueOf(dataList[3]);
+			long updateTime = Long.valueOf(dataList[6]);
+			
+			Player firedPlayer = Server.alivePlayersMap.get(playerAddress);;
+			firedPlayer.move(updateTime - firedPlayer.lastUpdateTime);
+			firedPlayer.setDx(dx);
+			firedPlayer.setDy(dy);
+			firedPlayer.move(System.nanoTime() - updateTime);
+			firedPlayer.lastUpdateTime = System.nanoTime();
+			
+			double angle; 
+			if (dx == 0 && dy == 0) {
+				angle = 0;
+			} else {
+				angle = Math.atan2(dy, dx) + Math.PI / 2;
+			}
+			
+			double x = firedPlayer.getxPos()+ Player.HITBOX_WIDTH / 2 - Math.sin(angle) * (-Player.HITBOX_HEIGHT / 2);
+			double y = firedPlayer.getyPos() + Player.HITBOX_HEIGHT / 2 + Math.cos(angle) * (-Player.HITBOX_HEIGHT / 2);
+			Missile newMissile = new Missile(x - Laser.WIDTH / 2, y - Laser.HEIGHT / 2, dx, dy, playerID, Server.projectileID++);
+			Server.projectilesList.add(newMissile);
+			
+			Server.notifyAllClients(Command.MISSILE_FIRED, newMissile.toString());
+			break;
+		}
 		
 		case GET_SERVER_TIME:
 			Server.notifyClient(Command.GET_SERVER_TIME, String.valueOf(System.nanoTime()), playerAddress);
+			break;
 
 		case DEAD:
-			Player deadPlayer = Server.alivePlayerMap.get(playerAddress);
-			Server.alivePlayerMap.remove(playerAddress);
-			Server.deadPlayerMap.put(playerAddress, deadPlayer);
+			Player deadPlayer = Server.alivePlayersMap.get(playerAddress);
+			Server.alivePlayersMap.remove(playerAddress);
+			Server.deadPlayersMap.put(playerAddress, deadPlayer);
 
 			Server.notifyAllClients(Command.REMOVE, deadPlayer.toString());
 			System.out.println("PlayerID: " + deadPlayer.getID() + " DIED");
@@ -93,17 +154,17 @@ public class PacketProcessor implements Runnable {
 	}
 
 	public void disconnect(String playerAddress) {
-		Player player = Server.alivePlayerMap.get(playerAddress);
+		Player player = Server.alivePlayersMap.get(playerAddress);
 		if(player == null) {
-			player = Server.deadPlayerMap.get(playerAddress);
+			player = Server.deadPlayersMap.get(playerAddress);
 		}
 
 		Server.notifyClient(Command.DISCONNECT, player.toString(), playerAddress);
 		if(!player.isDead()) {
-			Server.alivePlayerMap.remove(playerAddress);
+			Server.alivePlayersMap.remove(playerAddress);
 			Server.notifyAllClients(Command.REMOVE, player.toString());
 		} else {
-			Server.deadPlayerMap.remove(playerAddress);
+			Server.deadPlayersMap.remove(playerAddress);
 		}
 		Server.playerAddresses.remove(playerAddress);
 		System.out.println("Disconnecting " +player.getID());
