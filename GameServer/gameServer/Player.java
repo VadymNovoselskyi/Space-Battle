@@ -9,11 +9,11 @@ public class Player {
 	private String playerAddress;
 	private double xPos, yPos;
 	private int dx = 0, dy = 0;
-	protected long lastUpdateTime;
+	protected long lastUpdateTime, lastPingTime;
 	private double angle = 0;
 	private int health;
 	private boolean isDead = false;
-	protected static final int SPEED = 70, HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84;
+	protected static final int SPEED = 70, HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, TIMEOUT = 5;
 
 	public Player(int playerID, int xPos, int yPos) {
 		this.playerID = playerID;
@@ -128,6 +128,9 @@ public class Player {
 		return hitbox;
 	}
 	
+	public void ping() {
+		lastPingTime = System.nanoTime();
+	}
 
 	public int getHealth() {
 		return health;

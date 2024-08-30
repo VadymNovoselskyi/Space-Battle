@@ -3,6 +3,8 @@ package gameClient;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Image;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -24,7 +26,7 @@ public class GameController extends Thread{
 	private ConcurrentHashMap<Integer, Projectile> projectileMap = new ConcurrentHashMap<>();
 	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
 
-	protected static long timeAdjusment = 0;
+	protected long timeAdjusment = 0;
 	protected static final int FPS_PLAYER = 60, FPS_SERVER = 12;
 	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
 
@@ -38,11 +40,27 @@ public class GameController extends Thread{
 		loadImages();
 		loadFonts();
 		communicator = new Communicator(this, host, port);
-	}
+		gameFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                // Call the shutdown method of the communicator to stop its thread
+                communicator.closeConnection();
 
-	public void closeConnection(){
-		communicator.closeConnection();
+                // Optionally, you can wait for the thread to finish
+                try {
+                	communicator.join();
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+
+                // Dispose the frame and exit the application
+                gameFrame.dispose();
+                System.exit(0); // Ensure the application exits completely
+            }
+        });
+
 	}
+	
 
 	public void update(long deltaTime) {
 		int dx = me.getDirectionX(), dy = me.getDirectionY();
@@ -209,6 +227,7 @@ public class GameController extends Thread{
 		for(Projectile projectile : projectileMap.values()) {
 			projectile.move(System.nanoTime() - timeAdjusment - projectile.lastUpdateTime);
 			projectile.lastUpdateTime = System.nanoTime() - timeAdjusment;
+			if(projectile.borderCollision())  projectileMap.remove(projectile.getProjectileID());
 		}
 	}
 

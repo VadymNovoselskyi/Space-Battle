@@ -10,13 +10,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Server {
 	private static ServerReceiver receiver;
 	private static ServerSender sender;
-	protected static ConcurrentHashMap<String, Integer> playerAddresses = new ConcurrentHashMap<>();
 	
-	protected static List<Projectile> projectilesList = Collections.synchronizedList(new ArrayList<>());
-
+	protected static ConcurrentHashMap<Player, String> playerAddresses = new ConcurrentHashMap<>();	
 	protected static ConcurrentHashMap<String, Player> deadPlayersMap = new ConcurrentHashMap<>();
 	protected static ConcurrentHashMap<String, Player> alivePlayersMap = new ConcurrentHashMap<>();
+	
 	protected static ConcurrentHashMap<String, Player> updatedPlayers = new ConcurrentHashMap<>(); 
+
+	protected static List<Projectile> projectilesList = Collections.synchronizedList(new ArrayList<>());
 	
 	protected static int playerID = 1, projectileID = 1;
 	protected static final int FPS_SERVER = 12, FPS_RENDER = 24, GAME_WIDTH = 800, GAME_HEIGHT = 600;
@@ -49,7 +50,7 @@ public class Server {
 			
 			if(deltaTime > delay) {
 				if(updatedPlayers.size() != 0) {
-					for(String address : playerAddresses.keySet()) sender.updatePlayers(updatedPlayers, address);
+					for(String address : playerAddresses.values()) sender.updatePlayers(updatedPlayers, address);
 					updatedPlayers.clear();
 				}
 				lastUpdateTime = System.nanoTime();
@@ -68,13 +69,13 @@ public class Server {
 	}
 	
 	protected static void notifyAllClients(Command cmd, String data) {
-		for(String playerAddress : playerAddresses.keySet()) {
+		for(String playerAddress : playerAddresses.values()) {
 			sender.notifyClient(cmd, data, playerAddress);
 		}
 	}
 	
 	protected static void notifyAllButThis(Command cmd, String data, String ignoreAddres) {
-		for(String playerAddress : playerAddresses.keySet()) {
+		for(String playerAddress : playerAddresses.values()) {
 			if(!playerAddress.equals(ignoreAddres)) {
 				sender.notifyClient(cmd, data, playerAddress);
 			}

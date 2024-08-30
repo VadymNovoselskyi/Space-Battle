@@ -3,7 +3,9 @@ package gameClient;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
 import java.awt.geom.Path2D;
+import java.awt.geom.Rectangle2D;
 
 public class Projectile {
 	private double xPos, yPos, angle;
@@ -86,6 +88,21 @@ public class Projectile {
 	}
 
 	
+	public boolean borderCollision() {
+		Path2D hitbox = this.getHitbox();
+		Rectangle2D gameScreen = new Rectangle2D.Double(0, 0, GameController.GAME_WIDTH, GameController.GAME_HEIGHT);
+
+		// Check if any part of the hitbox is outside the game screen
+		if (gameScreen.contains(hitbox.getBounds2D())) return false;
+
+		// Create Area objects for more precise intersection checks
+		Area hitboxArea = new Area(hitbox);
+		Area gameScreenArea = new Area(gameScreen);
+
+		hitboxArea.subtract(gameScreenArea);
+		// If the hitboxArea is not empty after subtraction, then some part of it was outside the gameScreen
+		return !hitboxArea.isEmpty();
+	}
 	
 	
 	@Override
@@ -103,6 +120,10 @@ public class Projectile {
 
 	public int getSpeed() {
 		return speed;
+	}
+
+	public int getProjectileID() {
+		return projectileID;
 	}
 
 	public void setxPos(double xPos) {

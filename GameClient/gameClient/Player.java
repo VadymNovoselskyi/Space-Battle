@@ -185,6 +185,10 @@ public class Player {
 		return dy;
 	}
 
+	public int getPlayerID() {
+		return playerID;
+	}
+
 	@Override
 	public String toString() {
 		return playerID + "," + dx + "," + dy + "," + (int)xPos + "," + (int)yPos;

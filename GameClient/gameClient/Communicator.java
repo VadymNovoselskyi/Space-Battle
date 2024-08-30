@@ -15,7 +15,6 @@ public class Communicator extends Thread{
 	private String host;
 	private int port;
 
-
 	private GameController gameController;
 
 	private volatile boolean  quit = false;
@@ -87,11 +86,11 @@ public class Communicator extends Thread{
 	public void run() {
 		try {
 			socket = new DatagramSocket();
-			GameController.timeAdjusment = getAdjustment() - getLatency();
+			gameController.timeAdjusment = getAdjustment() - getLatency();
 //			System.out.println(GameController.timeAdjusment);
-			notifyServer(Command.NEW_PLAYER, System.nanoTime() + GameController.timeAdjusment);
+			notifyServer(Command.NEW_PLAYER, System.nanoTime() + gameController.timeAdjusment);
 
-			byte[] receiveData = new byte[128];
+			byte[] receiveData = new byte[128];			
 			while(!quit) {
 				DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 				socket.receive(receivedPacket);
@@ -101,9 +100,11 @@ public class Communicator extends Thread{
 				
 				String[] dataList = data.split(",");
 				Command cmd = Command.valueOf(dataList[0]);
-				if(cmd != Command.UPDATE_ALL) gameController.updatePlayerMap(data);
-				else gameController.updateAll(dataList);
+				if(cmd == Command.UPDATE_ALL) gameController.updateAll(dataList);
+				else if(cmd == Command.PING) notifyServer(Command.PING);
+				else gameController.updatePlayerMap(data);
 			}
+			System.out.println("Quit the loop");
 		}catch (IOException e) {
 			closeConnection();
 		}
@@ -179,6 +180,7 @@ public class Communicator extends Thread{
 	}
 
 	public void closeConnection() {
+		System.out.println("Closing connection");
 		quit = true;
 	}
 }

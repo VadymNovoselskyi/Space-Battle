@@ -1,14 +1,7 @@
 package gameClient;
 
-import java.awt.Canvas;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.*;
+import java.awt.event.*;
 import java.awt.image.BufferStrategy;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +19,7 @@ public class GameFrame extends JFrame implements KeyListener{
 	private Dimension canvasDimension;
 	private int width, height;
 
-	public GameFrame(int width, int height) {
+	public GameFrame(int width, int height) {;
 		this.width = width;
 		this.height = height;
 		canvasDimension= new Dimension(width, height);
@@ -52,7 +45,7 @@ public class GameFrame extends JFrame implements KeyListener{
 		this.pack();
 		this.setMinimumSize(canvasDimension);
 		this.setVisible(true);
-		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); // Important to control the closing behavior
 
 		gameCanvas.createBufferStrategy(2);
 		backBuffer = gameCanvas.getBufferStrategy();

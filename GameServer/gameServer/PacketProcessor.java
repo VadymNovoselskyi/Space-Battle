@@ -43,6 +43,7 @@ public class PacketProcessor implements Runnable {
 			System.out.println("PlayerID: " + Server.playerID + " Connected to server");
 			Server.playerID++;
 			newPlayer.lastUpdateTime = Long.valueOf(dataList[1]);
+			newPlayer.lastPingTime = Long.valueOf(dataList[1]);
 			newPlayer.setPlayerAddress(playerAddress);
 
 			Server.notifyClient(Command.CONNECTED, newPlayer.toString(), playerAddress);
@@ -53,7 +54,7 @@ public class PacketProcessor implements Runnable {
 			}
 			
 			Server.alivePlayersMap.put(playerAddress, newPlayer);
-			Server.playerAddresses.put(playerAddress, Server.playerID);
+			Server.playerAddresses.put(newPlayer, playerAddress);
 			Server.notifyAllButThis(cmd, newPlayer.toString(), playerAddress);
 			break;
 
@@ -133,6 +134,11 @@ public class PacketProcessor implements Runnable {
 		case GET_SERVER_TIME:
 			Server.notifyClient(Command.GET_SERVER_TIME, String.valueOf(System.nanoTime()), playerAddress);
 			break;
+		
+		case PING:
+			if(Server.alivePlayersMap.containsKey(playerAddress)) Server.alivePlayersMap.get(playerAddress).lastPingTime = System.nanoTime();
+			else if(Server.deadPlayersMap.containsKey(playerAddress)) Server.deadPlayersMap.get(playerAddress).lastPingTime = System.nanoTime();
+			break;
 
 		case DEAD:
 			Player deadPlayer = Server.alivePlayersMap.get(playerAddress);
@@ -153,7 +159,7 @@ public class PacketProcessor implements Runnable {
 		}
 	}
 
-	public void disconnect(String playerAddress) {
+	public static void disconnect(String playerAddress) {
 		Player player = Server.alivePlayersMap.get(playerAddress);
 		if(player == null) {
 			player = Server.deadPlayersMap.get(playerAddress);
@@ -162,7 +168,7 @@ public class PacketProcessor implements Runnable {
 		Server.notifyClient(Command.DISCONNECT, player.toString(), playerAddress);
 		if(!player.isDead()) {
 			Server.alivePlayersMap.remove(playerAddress);
-			Server.notifyAllClients(Command.REMOVE, player.toString());
+			Server.notifyAllButThis(Command.REMOVE, player.toString(), playerAddress);
 		} else {
 			Server.deadPlayersMap.remove(playerAddress);
 		}

@@ -18,7 +18,6 @@ public class ServerRender extends Thread {
 		for(Projectile projectile : Server.projectilesList) {
 			projectile.move(System.nanoTime() - projectile.lastUpdateTime);
 			projectile.lastUpdateTime = System.nanoTime();
-			//check if its out of borders
 		}
 	}
 
@@ -37,20 +36,37 @@ public class ServerRender extends Thread {
 							Server.alivePlayersMap.remove(player1.getPlayerAddress());
 							Server.deadPlayersMap.put(player1.getPlayerAddress(), player1);
 						}
-						System.out.println("Projectile hit " + player1.toString() + " --- " + projectile.toString());
+						//						System.out.println("Projectile hit " + player1.toString() + " --- " + projectile.toString());
 					}
+					else if(projectile.borderCollision()) iterator.remove();
 				}
 			}
 
 
-//			for(Player player2 : Server.alivePlayersMap.values()) {
-//				if(player1 != player2) {
-//					if(player1.collision(player2)) {
-//						System.out.println("Collision!!!");
-//					}
-//				}
-//			}
+			//			for(Player player2 : Server.alivePlayersMap.values()) {
+			//				if(player1 != player2) {
+			//					if(player1.collision(player2)) {
+			//						System.out.println("Collision!!!");
+			//					}
+			//				}
+			//			}
 		}
+	}
+
+	public void checkTimeout() {
+		long time = System.nanoTime();
+		Iterator<Player> iterator = Server.playerAddresses.keySet().iterator();
+		while (iterator.hasNext()) {
+			Player player = iterator.next();
+			if(time - player.lastPingTime > Player.TIMEOUT * 1e9 / 2) {
+				Server.notifyClient(Command.PING, "", Server.playerAddresses.get(player));
+				if(time - player.lastPingTime > Player.TIMEOUT * 1e9) {
+					PacketProcessor.disconnect(Server.playerAddresses.get(player));
+					iterator.remove();
+				}
+			}
+		}
+
 	}
 
 	public void run() {
@@ -64,6 +80,7 @@ public class ServerRender extends Thread {
 				movePlayers();
 				moveProjectiles();
 				checkCollisions();
+				checkTimeout();
 				lastRenderTime = System.nanoTime();
 			}
 
