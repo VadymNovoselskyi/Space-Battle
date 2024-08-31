@@ -6,74 +6,79 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Server {
+	protected static final int FPS_SERVER = 12, FPS_RENDER = 24, GAME_WIDTH = 800, GAME_HEIGHT = 600;
+    private static final int THREAD_POOL_SIZE = 5, NUM_RECEIVERS = 3;
+	protected static int playerID = 1, projectileID = 1;
+
+	private static DatagramSocket socket;
+	private static ScheduledExecutorService executor;
 	private static ServerReceiver receiver;
 	private static ServerSender sender;
-	
+	private static ServerRender render;
+
 	protected static ConcurrentHashMap<Player, String> playerAddresses = new ConcurrentHashMap<>();	
 	protected static ConcurrentHashMap<String, Player> deadPlayersMap = new ConcurrentHashMap<>();
 	protected static ConcurrentHashMap<String, Player> alivePlayersMap = new ConcurrentHashMap<>();
-	
+	protected static List<Projectile> projectilesList = Collections.synchronizedList(new ArrayList<>());
+
 	protected static ConcurrentHashMap<String, Player> updatedPlayers = new ConcurrentHashMap<>(); 
 
-	protected static List<Projectile> projectilesList = Collections.synchronizedList(new ArrayList<>());
-	
-	protected static int playerID = 1, projectileID = 1;
-	protected static final int FPS_SERVER = 12, FPS_RENDER = 24, GAME_WIDTH = 800, GAME_HEIGHT = 600;
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SocketException {
+		executor = Executors.newScheduledThreadPool(THREAD_POOL_SIZE);
+
+		socket = new DatagramSocket(9864);
+		receiver = new ServerReceiver(socket);
+		sender = new ServerSender(socket);
+		render = new ServerRender();
+		Runnable updateTask = () -> updatePlayers();
 		System.out.println("Server is up and running");
-		DatagramSocket socket = null;
-		try {
-			socket = new DatagramSocket(9864);
-		} catch (SocketException e) {
-			e.printStackTrace();
+
+		executor.scheduleAtFixedRate(updateTask, 0, 1000 / FPS_SERVER, TimeUnit.MILLISECONDS);
+		executor.scheduleAtFixedRate(render, 0, 1000 / FPS_RENDER, TimeUnit.MILLISECONDS);
+		
+		for(int i = 0; i < NUM_RECEIVERS; i++) {			
+			executor.scheduleWithFixedDelay(receiver, 0, 1, TimeUnit.MILLISECONDS);
 		}
 
-		// Create and start the Receiver thread
-		receiver  = new ServerReceiver(socket);
-		Thread receiverThread = new Thread(receiver);
-		receiverThread.start();
-
-		// Create and start the Sender thread
-		sender = new ServerSender(socket);
-		
-		ServerRender render = new ServerRender();
-		render.start();
-
-
-		long lastUpdateTime = System.nanoTime();
-		double delay = 1e9 / FPS_SERVER;
-		while(true) {
-			long deltaTime = System.nanoTime() - lastUpdateTime;
-			
-			if(deltaTime > delay) {
-				if(updatedPlayers.size() != 0) {
-					for(String address : playerAddresses.values()) sender.updatePlayers(updatedPlayers, address);
-					updatedPlayers.clear();
+		//shutdown gracefuly
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			try {
+				System.out.println("Shutting down server...");
+				socket.close();
+				executor.shutdown();
+				if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+					executor.shutdownNow();
 				}
-				lastUpdateTime = System.nanoTime();
+			} catch (InterruptedException e) {
+				executor.shutdownNow();
 			}
-			
-			else {
-				try {
-					Thread.sleep((long) ((delay - deltaTime) / 1e6));
-				} catch (InterruptedException e) {}
-			}
+		}));
+
+	}
+
+	public static void updatePlayers() {
+		if(updatedPlayers.size() != 0) {
+			for(String address : playerAddresses.values()) sender.updatePlayers(updatedPlayers, address);
+			updatedPlayers.clear();
 		}
 	}
-	
+
 	protected static void notifyClient(Command cmd, String data, String playerAddress) {
 		sender.notifyClient(cmd, data, playerAddress);
 	}
-	
+
 	protected static void notifyAllClients(Command cmd, String data) {
 		for(String playerAddress : playerAddresses.values()) {
 			sender.notifyClient(cmd, data, playerAddress);
 		}
 	}
-	
+
 	protected static void notifyAllButThis(Command cmd, String data, String ignoreAddres) {
 		for(String playerAddress : playerAddresses.values()) {
 			if(!playerAddress.equals(ignoreAddres)) {

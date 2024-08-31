@@ -1,37 +1,33 @@
 package gameClient;
 
 import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.Image;
 
 public class Player {
-	protected int playerID;
-	private Image img;
-	protected double xPos, yPos;
+	public static final int SPEED = 70, HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84;
+	private int playerID;
+	private double xPos, yPos;
 	private int dx = 0, dy = 0;
 	protected long lastUpdateTime = 0;
 	private double angle = 0, supposedAngle;
-	//	protected int health;
-	public static final int SPEED = 70, PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
+	private Image img;
 
 	public Player(int playerID, int xPos, int yPos, Image img) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
 		this.img = img;
-		//		this.health = health;
 	}
 
 	public void move(long deltaTime) {
-		//		System.out.println(dx*(deltaTime/1e9)*speed);
-		//		System.out.println(dy*(deltaTime/1e9)*speed);
-		xPos += dx*(deltaTime/1e9)*SPEED;
-		yPos += dy*(deltaTime/1e9)*SPEED;
+		xPos += dx*(deltaTime/1e9)*SPEED * Math.abs(Math.sin(angle));
+		yPos += dy*(deltaTime/1e9)*SPEED * Math.abs(Math.cos(angle));
 	}
+
 
 	public boolean collision(Player player) {
 		Path2D myHitbox = this.getHitbox();
@@ -44,8 +40,8 @@ public class Player {
 			Area myArea = new Area(myHitbox);
 			Area playerArea = new Area(playerHitbox);
 
+			//Check if any pice of myArea is inside of playerArea
 			myArea.intersect(playerArea);
-
 			return !myArea.isEmpty();	
 		}
 	}
@@ -58,10 +54,10 @@ public class Player {
 		// Check if the actual hitboxes intersect
 		else {
 			Area myArea = new Area(myHitbox);
-			Area projectuleArea = new Area(projectileHitbox);
+			Area projectileArea = new Area(projectileHitbox);
 
-			myArea.intersect(projectuleArea);
-
+			//Check if any pice of myArea is inside of projectileArea
+			myArea.intersect(projectileArea);
 			return !myArea.isEmpty();	
 		}
 	}
@@ -82,27 +78,6 @@ public class Player {
 	}
 
 
-	public void update(int health) {
-		//		this.health = health;
-	}
-
-	public void update(int xPos, int yPos) {
-		this.xPos = xPos;
-		this.yPos = yPos;
-	}
-
-	public void update(int dx, int dy, int xPos, int yPos) {
-		this.dx = dx;
-		this.dy = dy;
-		this.xPos = xPos;
-		this.yPos = yPos;
-	}
-
-	public void update(int xPos, int yPos, int health) {
-		this.update(health);
-		this.update(xPos, yPos);
-	}
-
 	public void draw(Graphics2D g) {
 		double interpolationFactor = 0.25;
 		double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
@@ -114,7 +89,7 @@ public class Player {
 			angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
 		}
 
-		if (Math.abs(supposedAngle - angle) > 0.4) { // A small threshold to stop jitter
+		if (Math.abs(supposedAngle - angle) > 0.1) { // A small threshold to stop jitter
 			angle = angle + interpolationFactor * angleDifference;
 		} else {
 			angle = supposedAngle;
@@ -122,11 +97,11 @@ public class Player {
 
 		AffineTransform old = g.getTransform();
 		// Translate to the center of the player image for rotation
-		g.translate(xPos + PLAYER_HITBOX_WIDTH / 2, yPos + PLAYER_HITBOX_HEIGHT / 2);
+		g.translate(xPos + HITBOX_WIDTH / 2, yPos + HITBOX_HEIGHT / 2);
 		g.rotate(angle);
 
 		// Draw the image, centered on the translation point
-		g.drawImage(img, -PLAYER_HITBOX_WIDTH / 2, -PLAYER_HITBOX_HEIGHT / 2, null);
+		g.drawImage(img, -HITBOX_WIDTH / 2, -HITBOX_HEIGHT / 2, null);
 
 		// Restore the old transform
 		g.setTransform(old);	
@@ -135,15 +110,15 @@ public class Player {
 
 	// Method to get the corners of the rotated rectangle
 	private Path2D getHitbox() {
-		double centerX = xPos + PLAYER_HITBOX_WIDTH / 2;
-		double centerY = yPos + PLAYER_HITBOX_HEIGHT / 2;
+		double centerX = xPos + HITBOX_WIDTH / 2;
+		double centerY = yPos + HITBOX_HEIGHT / 2;
 
 		// Define the original corners of the image
 		double[][] corners = {
 				{xPos, yPos},             // Top-left
-				{xPos + PLAYER_HITBOX_WIDTH, yPos},     // Top-right
-				{xPos + PLAYER_HITBOX_WIDTH, yPos + PLAYER_HITBOX_HEIGHT}, // Bottom-right
-				{xPos, yPos + PLAYER_HITBOX_HEIGHT}     // Bottom-left
+				{xPos + HITBOX_WIDTH, yPos},     // Top-right
+				{xPos + HITBOX_WIDTH, yPos + HITBOX_HEIGHT}, // Bottom-right
+				{xPos, yPos + HITBOX_HEIGHT}     // Bottom-left
 		};
 
 		// Create a Path2D object to hold the hitbox outline
@@ -169,12 +144,22 @@ public class Player {
 		return hitbox;
 	}
 
-	public void setDirectionX(int dx) {
-		this.dx = dx;
+
+	public void updateDirections(int dx, int dy) {
+		this.dx = dy;
+		this.dx = dy;
 	}
 
-	public void setDirectionY(int dy) {
+	public void update(int xPos, int yPos, int dx, int dy) {
+		this.xPos = xPos;
+		this.yPos = yPos;
+		this.dx = dx;
 		this.dy = dy;
+	}
+
+
+	public int getPlayerID() {
+		return playerID;
 	}
 
 	public int getDirectionX() {
@@ -185,17 +170,24 @@ public class Player {
 		return dy;
 	}
 
-	public int getPlayerID() {
-		return playerID;
+
+	public void setDirectionX(int dx) {
+		this.dx = dx;
 	}
 
-	@Override
-	public String toString() {
-		return playerID + "," + dx + "," + dy + "," + (int)xPos + "," + (int)yPos;
+	public void setDirectionY(int dy) {
+		this.dy = dy;
 	}
 
 	public void setSupposedAngle(double supposedAngle) {
 		this.supposedAngle = supposedAngle;
+	}
+
+
+
+	@Override
+	public String toString() {
+		return playerID + "," + (int)xPos + "," + (int)yPos + "," + dx + "," + dy;
 	}
 }
 

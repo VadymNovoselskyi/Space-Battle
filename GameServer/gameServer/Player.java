@@ -1,7 +1,7 @@
 package gameServer;
 
-import java.awt.geom.Area;
 import java.awt.geom.Path2D;
+import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 
 public class Player {
@@ -13,7 +13,7 @@ public class Player {
 	private double angle = 0;
 	private int health;
 	private boolean isDead = false;
-	protected static final int SPEED = 70, HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, TIMEOUT = 5;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 5;
 
 	public Player(int playerID, int xPos, int yPos) {
 		this.playerID = playerID;
@@ -21,34 +21,27 @@ public class Player {
 		this.yPos = yPos;
 		this.health = 10;
 	}
-	
+
 	public void move(long deltaTime) {
-//		System.out.println(dx*(deltaTime/1e9)*speed);
-//		System.out.println(dy*(deltaTime/1e9)*speed);
-		xPos += dx*(deltaTime/1e9)*SPEED;
-		yPos += dy*(deltaTime/1e9)*SPEED;
+		xPos += dx*(deltaTime/1e9)*SPEED * Math.abs(Math.sin(angle));
+		yPos += dy*(deltaTime/1e9)*SPEED * Math.abs(Math.cos(angle));
 	}
 
-	public void update(int xPos, int yPos) {
-		this.xPos = xPos;
-		this.yPos = yPos;
-	}
-
-	public void update(int dx, int dy, int xPos, int yPos) {
+	public void updateDirections(int dx, int dy) {
 		this.dx = dx;
 		this.dy = dy;
-		this.xPos = xPos;
-		this.yPos = yPos;
+		if(dx == 0 && dy == 0) angle = 0;
+		else angle = Math.atan2(dy, dx) + Math.PI / 2;
 	}
-	
-	
+
+
 	public boolean collision(Player player) {
 		Path2D myHitbox = this.getHitbox();
 		Path2D playerHitbox = player.getHitbox();
 
 		// Check if the bounding boxes (x-y alligned, so bigger than hitboxes) intersect first for a quick elimination
 		if (!myHitbox.getBounds2D().intersects(playerHitbox.getBounds2D())) return false;
-		
+
 		// Check if the actual hitboxes intersect
 		else {
 			Area myArea = new Area(myHitbox);
@@ -65,7 +58,7 @@ public class Player {
 
 		// Check if the bounding boxes (x-y alligned, so bigger than hitboxes) intersect first for a quick elimination
 		if (!myHitbox.getBounds2D().intersects(projectileHitbox.getBounds2D())) return false;
-		
+
 		// Check if the actual hitboxes intersect
 		else {
 			Area myArea = new Area(myHitbox);
@@ -91,8 +84,8 @@ public class Player {
 		// If the hitboxArea is not empty after subtraction, then some part of it was outside the gameScreen
 		return !hitboxArea.isEmpty();
 	}
-	
-	
+
+
 	private Path2D getHitbox() {
 		double centerX = xPos + HITBOX_WIDTH / 2;
 		double centerY = yPos + HITBOX_HEIGHT / 2;
@@ -127,25 +120,10 @@ public class Player {
 		hitbox.closePath();
 		return hitbox;
 	}
-	
-	public void ping() {
-		lastPingTime = System.nanoTime();
-	}
 
-	public int getHealth() {
-		return health;
-	}
 
-	public void setHealth(int health) {
-		this.health = health;
-	}
-
-	public int getDx() {
-		return dx;
-	}
-
-	public int getDy() {
-		return dy;
+	public int getID(){
+		return playerID;
 	}
 
 	public double getxPos() {
@@ -156,36 +134,54 @@ public class Player {
 		return yPos;
 	}
 
-	public void setDx(int dx) {
-		this.dx = dx;
+	public int getDirectionX() {
+		return dx;
 	}
 
-	public void setDy(int dy) {
-		this.dy = dy;
+	public int getDirectionY() {
+		return dy;
+	}
+	
+	public String getPlayerAddress() {
+		return playerAddress;
 	}
 
-	public int getID(){
-		return playerID;
+	public int getHealth() {
+		return health;
 	}
 
 	public boolean isDead() {
 		return isDead;
+
+	}
+
+	public void setDirectionX(int dx) {
+		this.dx = dx;
+	}
+
+	public void setDirectionY(int dy) {
+		this.dy = dy;
+	}
+
+	public void setPlayerAddress(String playerAddress) {
+		this.playerAddress = playerAddress;
+	}
+	
+	public void setHealth(int health) {
+		this.health = health;
 	}
 
 	public void setDead(boolean isDead) {
 		this.isDead = isDead;
 	}
 
+	public void ping() {
+		lastPingTime = System.nanoTime();
+	}
+	
+
 	@Override
 	public String toString() {
-		return playerID + "," + dx +"," + dy + "," + (int)xPos + "," + (int)yPos + "," + lastUpdateTime;
-	}
-
-	public String getPlayerAddress() {
-		return playerAddress;
-	}
-
-	public void setPlayerAddress(String playerAddress) {
-		this.playerAddress = playerAddress;
+		return playerID +","+ (int)xPos +","+ (int)yPos +","+ dx +","+ dy +","+ lastUpdateTime;
 	}
 }

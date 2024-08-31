@@ -1,10 +1,10 @@
 package gameServer;
 
 public class Laser extends Projectile {
-	public static final int DAMAGE = 2, SPEED = 300, WIDTH = 14, HEIGHT = 47;
+	public static final int WIDTH = 14, HEIGHT = 47, SPEED = 300, DAMAGE = 2;
 
-	public Laser(double xPos, double yPos, int dx, int dy, int playerID, int projectileID) {
-		super(xPos, yPos, dx, dy, WIDTH, HEIGHT, SPEED, playerID, projectileID);
+	public Laser(int playerID, int projectileID, double xPos, double yPos, int dx, int dy) {
+		super(playerID, projectileID, xPos, yPos, dx, dy, WIDTH, HEIGHT, SPEED);
 	}
 
 	public void hit(Player player) {

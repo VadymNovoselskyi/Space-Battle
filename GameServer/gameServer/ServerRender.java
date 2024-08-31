@@ -2,9 +2,17 @@ package gameServer;
 
 import java.util.Iterator;
 
-public class ServerRender extends Thread {
+public class ServerRender implements Runnable {
 
 	public ServerRender() {}
+
+
+	public void run() {
+		movePlayers();
+		moveProjectiles();
+		checkCollisions();
+		checkTimeout();
+	}
 
 
 	public void movePlayers() {
@@ -36,20 +44,10 @@ public class ServerRender extends Thread {
 							Server.alivePlayersMap.remove(player1.getPlayerAddress());
 							Server.deadPlayersMap.put(player1.getPlayerAddress(), player1);
 						}
-						//						System.out.println("Projectile hit " + player1.toString() + " --- " + projectile.toString());
 					}
 					else if(projectile.borderCollision()) iterator.remove();
 				}
 			}
-
-
-			//			for(Player player2 : Server.alivePlayersMap.values()) {
-			//				if(player1 != player2) {
-			//					if(player1.collision(player2)) {
-			//						System.out.println("Collision!!!");
-			//					}
-			//				}
-			//			}
 		}
 	}
 
@@ -61,35 +59,12 @@ public class ServerRender extends Thread {
 			if(time - player.lastPingTime > Player.TIMEOUT * 1e9 / 2) {
 				Server.notifyClient(Command.PING, "", Server.playerAddresses.get(player));
 				if(time - player.lastPingTime > Player.TIMEOUT * 1e9) {
-					PacketProcessor.disconnect(Server.playerAddresses.get(player));
+					ServerReceiver.disconnect(Server.playerAddresses.get(player));
 					iterator.remove();
 				}
 			}
 		}
 
-	}
-
-	public void run() {
-		long lastRenderTime = System.nanoTime();
-		double delay = 1e9 / Server.FPS_RENDER;
-
-		while(true) {
-			long deltaTime = System.nanoTime() - lastRenderTime;
-
-			if(deltaTime > delay) {
-				movePlayers();
-				moveProjectiles();
-				checkCollisions();
-				checkTimeout();
-				lastRenderTime = System.nanoTime();
-			}
-
-			else {
-				try {
-					Thread.sleep((long) ((delay - deltaTime) / 1e6));
-				} catch (InterruptedException e) {}
-			}
-		}
 	}
 }
 

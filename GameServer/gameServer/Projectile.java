@@ -1,15 +1,17 @@
 package gameServer;
 
-import java.awt.geom.Area;
 import java.awt.geom.Path2D;
+import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 
 public class Projectile {
-	private double xPos, yPos, angle;
 	private int playerID, projectileID, dx, dy, width, height, speed;
+	private double xPos, yPos, angle;
 	protected long lastUpdateTime;
 	
-	public Projectile(double xPos, double yPos, int dx, int dy, int width, int height, int speed, int playerID, int projectileID) {
+	public Projectile(int playerID, int projectileID, double xPos, double yPos, int dx, int dy, int width, int height, int speed) {
+		this.playerID = playerID; 
+		this.projectileID = projectileID;
 		this.xPos = xPos;
 		this.yPos = yPos;
 		
@@ -19,8 +21,6 @@ public class Projectile {
 		this.width = width;
 		this.height = height;
 		this.speed = speed;
-		this.playerID = playerID; 
-		this.projectileID = projectileID;
 		
 	    if(dx == 0 && dy == 0) angle = 0;
 	    else angle = Math.atan2(dy, dx) + Math.PI / 2;
@@ -28,8 +28,8 @@ public class Projectile {
 	}
 	
 	public void move(long deltaTime) {
-		xPos += dx*(deltaTime/1e9)*speed;
-		yPos += dy*(deltaTime/1e9)*speed;
+		xPos += dx*(deltaTime/1e9)*speed * Math.abs(Math.sin(angle));
+		yPos += dy*(deltaTime/1e9)*speed * Math.abs(Math.cos(angle));
 	}
 	
 	public void hit(Player player) {
@@ -94,7 +94,7 @@ public class Projectile {
 	
 	@Override
 	public String toString() {
-		return playerID + "," + dx + "," + dy + "," + (int)xPos + "," + (int)yPos + "," + projectileID + "," + lastUpdateTime; 
+		return projectileID +","+ (int)xPos +","+ (int)yPos +","+ dx +","+ dy +","+ lastUpdateTime; 
 	}
 
 	public double getxPos() {

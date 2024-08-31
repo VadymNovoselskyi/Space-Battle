@@ -1,10 +1,10 @@
 package gameServer;
 
 public class Missile extends Projectile {
-	public static final int DAMAGE = 5, SPEED = 160, WIDTH = 26, HEIGHT = 42;
+	public static final int WIDTH = 26, HEIGHT = 42, SPEED = 160, DAMAGE = 5;
 	
-	public Missile(double xPos, double yPos, int dx, int dy, int playerID, int projectileID) {
-		super(xPos, yPos, dx, dy, WIDTH, HEIGHT, SPEED, playerID, projectileID);
+	public Missile(int playerID, int projectileID, double xPos, double yPos, int dx, int dy) {
+		super(playerID, projectileID, xPos, yPos, dx, dy, WIDTH, HEIGHT, SPEED);
 	}
 	
 	public void hit(Player player) {

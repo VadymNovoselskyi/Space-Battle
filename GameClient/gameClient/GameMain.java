@@ -3,15 +3,14 @@ package gameClient;
 import java.io.IOException;
 
 public class GameMain {
-	private GameController gameController;
-//	private String host = "localhost";
 	private int port = 9864;
+//	private String host = "localhost";
 	private String host = "192.168.1.21";
 
 	public GameMain() {
 		//host = JOptionPane.showInputDialog("Server Adress");
 		try {
-			gameController = new GameController(host, port, 800, 600);
+			new GameController(host, port);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
