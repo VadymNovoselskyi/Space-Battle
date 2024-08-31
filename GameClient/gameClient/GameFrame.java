@@ -12,12 +12,16 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Color;
 import java.awt.Image;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 
 public class GameFrame extends JFrame implements KeyListener{
-	public HashMap<String, Boolean> keyDown = new HashMap<>();
+	public enum Key {
+		LEFT, RIGHT, UP, DOWN, ESC, Q, SPACE
+	}
+	public EnumMap<Key, Boolean> keyDown = new EnumMap<>(Key.class);
 
 	private Canvas gameCanvas;
 	private BufferStrategy backBuffer;
@@ -30,17 +34,12 @@ public class GameFrame extends JFrame implements KeyListener{
 	this.width = width;
 	this.height = height;
 	canvasDimension= new Dimension(width, height);
-	addKeyListener(this);
-
 	createWindow();
 
-	keyDown.put("left", false);
-	keyDown.put("right", false);
-	keyDown.put("up", false);
-	keyDown.put("down", false);
-	keyDown.put("esc", false);
-	keyDown.put("q", false);
-	keyDown.put("space", false);
+	addKeyListener(this);
+	for (Key key : Key.values()) {
+		keyDown.put(key, false);
+	}
 	}
 
 	public void createWindow() {
@@ -51,6 +50,7 @@ public class GameFrame extends JFrame implements KeyListener{
 		this.add(gameCanvas);
 		this.pack();
 		this.setMinimumSize(canvasDimension);
+		this.setResizable(false);
 		this.setVisible(true);
 		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); // Important to control the closing behavior
 
@@ -60,88 +60,62 @@ public class GameFrame extends JFrame implements KeyListener{
 
 	public void render(ConcurrentHashMap<Integer, Player> playerMap) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
-		for (Player player : playerMap.values()) {
-			player.draw(g);
-		}
-		backBuffer.show();
+		playerMap.values().forEach(player -> player.draw(g));
 		g.dispose();
+		backBuffer.show();
 	}
 	public void renderProjectiles(ConcurrentHashMap<Integer, Projectile> projectileMap) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
-		for (Projectile player : projectileMap.values()) {
-			player.draw(g);
-		}
+		projectileMap.values().forEach(projectile -> projectile.draw(g));
 		g.dispose();
 	}
 
 	public void write(String text, int x, int y, Color color, Font font) {
 		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
-		g.setColor(Color.BLACK);
-		g.fillRect(0, 0, width, height);
 		g.drawImage(background, 0, 0, width, height, gameCanvas);
-
-		g.setFont(font);
-		g.setColor(color);
-		g.drawString(text, x, y);
+		drawText(g, text, x, y, color, font);
 		g.dispose();
 	}
 	public void write(String text, Color color, Font font) {
 		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
-		g.setFont(font);
-		g.setColor(color);
 		FontMetrics fontMetrics = g.getFontMetrics(font);
 		int x = (width - fontMetrics.stringWidth(text)) / 2;
 		int y = ((height - fontMetrics.getHeight()) / 2) + fontMetrics.getAscent();
-
-		g.drawString(text, x, y);
+		drawText(g, text, x, y, color, font);
 		g.dispose();
+	}
+
+	private void drawText(Graphics2D g, String text, int x, int y, Color color, Font font) {
+		g.setFont(font);
+		g.setColor(color);
+		g.drawString(text, x, y);
 	}
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-		int key = e.getKeyCode();
-
-		if(key == KeyEvent.VK_LEFT) {
-			keyDown.put("left", true);
-		} else if(key == KeyEvent.VK_RIGHT) {
-			keyDown.put("right", true);
-		} else if(key == KeyEvent.VK_UP) {
-			keyDown.put("up", true);
-		} else if(key == KeyEvent.VK_DOWN) {
-			keyDown.put("down", true);
-		} else if(key == KeyEvent.VK_ESCAPE) {
-			keyDown.put("esc", true);
-		} else if(key == KeyEvent.VK_Q) {
-			keyDown.put("q", true);
-		} else if(key == KeyEvent.VK_SPACE) {
-			keyDown.put("space", true);
-		}
+		setKeyState(e, true);
 	}
 
 	@Override
 	public void keyReleased(KeyEvent e) {
-		int key = e.getKeyCode();
+		setKeyState(e, false);
+	}
 
-		if(key == KeyEvent.VK_LEFT) {
-			keyDown.put("left", false);
-		} else if(key == KeyEvent.VK_RIGHT) {
-			keyDown.put("right", false);
-		} else if(key == KeyEvent.VK_UP) {
-			keyDown.put("up", false);
-		} else if(key == KeyEvent.VK_DOWN) {
-			keyDown.put("down", false);
-		} else if(key == KeyEvent.VK_SPACE) {
-			keyDown.put("space", false);
+	private void setKeyState(KeyEvent e, boolean state) {
+		switch (e.getKeyCode()) {
+		case KeyEvent.VK_LEFT -> keyDown.put(Key.LEFT, state);
+		case KeyEvent.VK_RIGHT -> keyDown.put(Key.RIGHT, state);
+		case KeyEvent.VK_UP -> keyDown.put(Key.UP, state);
+		case KeyEvent.VK_DOWN -> keyDown.put(Key.DOWN, state);
+		case KeyEvent.VK_ESCAPE -> keyDown.put(Key.ESC, state);
+		case KeyEvent.VK_Q -> keyDown.put(Key.Q, state);
+		case KeyEvent.VK_SPACE -> keyDown.put(Key.SPACE, state);
 		}
 	}
 
 	@Override
 	public void keyTyped(KeyEvent e) {}
 
-
-	public Dimension getCanvasDimension() {
-		return canvasDimension;
-	}
 
 	public void setBackground(Image background) {
 		this.background = background;

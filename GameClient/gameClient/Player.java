@@ -8,7 +8,8 @@ import java.awt.geom.Rectangle2D;
 import java.awt.Image;
 
 public class Player {
-	public static final int SPEED = 70, HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84;
+	public static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70;
+	protected static final double MAX_ROTATION_SPEED = Math.PI * 1.8, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
 	private double xPos, yPos;
 	private int dx = 0, dy = 0;
@@ -79,7 +80,6 @@ public class Player {
 
 
 	public void draw(Graphics2D g) {
-		double interpolationFactor = 0.25;
 		double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
 
 		// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
@@ -88,9 +88,12 @@ public class Player {
 		if (Math.abs(angleDifference) > Math.PI) {
 			angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
 		}
-
-		if (Math.abs(supposedAngle - angle) > 0.1) { // A small threshold to stop jitter
-			angle = angle + interpolationFactor * angleDifference;
+		
+		if(Math.abs(angleDifference * GameController.FPS_PLAYER) > MAX_ROTATION_SPEED) {
+			angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / GameController.FPS_PLAYER;
+		}
+		else if (Math.abs(supposedAngle - angle) > JITTER_THRESHOLD) { // A small threshold to stop jitter
+			angle = angle + INTERPOLATION_FACTOR * angleDifference;
 		} else {
 			angle = supposedAngle;
 		}
@@ -147,7 +150,8 @@ public class Player {
 
 	public void updateDirections(int dx, int dy) {
 		this.dx = dy;
-		this.dx = dy;
+		this.dy = dy;
+		supposedAngle = (dx == 0 && dy == 0) ? angle : Math.atan2(dy, dx) + Math.PI / 2;
 	}
 
 	public void update(int xPos, int yPos, int dx, int dy) {
@@ -155,6 +159,7 @@ public class Player {
 		this.yPos = yPos;
 		this.dx = dx;
 		this.dy = dy;
+		supposedAngle = (dx == 0 && dy == 0) ? angle : Math.atan2(dy, dx) + Math.PI / 2;
 	}
 
 
@@ -177,10 +182,6 @@ public class Player {
 
 	public void setDirectionY(int dy) {
 		this.dy = dy;
-	}
-
-	public void setSupposedAngle(double supposedAngle) {
-		this.supposedAngle = supposedAngle;
 	}
 
 

@@ -10,6 +10,7 @@ import java.io.IOException;
 public class Communicator implements Runnable{
 	private GameController gameController;
 	private DatagramSocket socket;
+	InetAddress serverAddress = null;
 	private String host;
 	private int port;
 
@@ -19,6 +20,11 @@ public class Communicator implements Runnable{
 		this.gameController = gameController;
 		
 		socket = new DatagramSocket();
+		try {
+			serverAddress = InetAddress.getByName(host);
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
 		gameController.timeAdjusment = getAdjustment() - getLatency();
 		notifyServer(Command.NEW_PLAYER, System.nanoTime() + gameController.timeAdjusment);
 	}
@@ -45,12 +51,6 @@ public class Communicator implements Runnable{
 
 	public void notifyServer(Command cmd, String data, long time) {
 		data = cmd.toString() + "," + data + "," + time;
-		InetAddress serverAddress = null;
-		try {
-			serverAddress = InetAddress.getByName(host);
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
 
 		byte[] sendData = data.getBytes();
 		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverAddress, port);

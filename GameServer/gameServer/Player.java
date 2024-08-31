@@ -5,15 +5,16 @@ import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 
 public class Player {
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 5;
+	protected static final double MAX_ROTATION_SPEED = Math.PI * 1.8, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
 	private String playerAddress;
 	private double xPos, yPos;
 	private int dx = 0, dy = 0;
 	protected long lastUpdateTime, lastPingTime;
-	private double angle = 0;
+	private double angle = 0, supposedAngle;
 	private int health;
 	private boolean isDead = false;
-	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 5;
 
 	public Player(int playerID, int xPos, int yPos) {
 		this.playerID = playerID;
@@ -23,6 +24,24 @@ public class Player {
 	}
 
 	public void move(long deltaTime) {
+		double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
+
+		// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
+		//the shortestroute will always be pi or less, so if angleDifference is more than that
+		//we need to fix it by chnaging its sign and value to 2pi - angle
+		if (Math.abs(angleDifference) > Math.PI) {
+			angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
+		}
+		
+		if(Math.abs(angleDifference * Server.FPS_RENDER) > MAX_ROTATION_SPEED) {
+			angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / Server.FPS_RENDER;
+		}
+		else if (Math.abs(supposedAngle - angle) > JITTER_THRESHOLD) { // A small threshold to stop jitter
+			angle = angle + INTERPOLATION_FACTOR * angleDifference;
+		} else {
+			angle = supposedAngle;
+		}
+		
 		xPos += dx*(deltaTime/1e9)*SPEED * Math.abs(Math.sin(angle));
 		yPos += dy*(deltaTime/1e9)*SPEED * Math.abs(Math.cos(angle));
 	}
@@ -30,8 +49,11 @@ public class Player {
 	public void updateDirections(int dx, int dy) {
 		this.dx = dx;
 		this.dy = dy;
-		if(dx == 0 && dy == 0) angle = 0;
-		else angle = Math.atan2(dy, dx) + Math.PI / 2;
+		supposedAngle = (dx == 0 && dy == 0) ? angle : Math.atan2(dy, dx) + Math.PI / 2;
+	}
+	
+	public void updateAngle(double angle) {
+		supposedAngle = angle;
 	}
 
 

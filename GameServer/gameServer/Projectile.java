@@ -28,8 +28,8 @@ public class Projectile {
 	}
 	
 	public void move(long deltaTime) {
-		xPos += dx*(deltaTime/1e9)*speed * Math.abs(Math.sin(angle));
-		yPos += dy*(deltaTime/1e9)*speed * Math.abs(Math.cos(angle));
+		xPos += (deltaTime/1e9)*speed * Math.sin(angle);
+		yPos -= (deltaTime/1e9)*speed * Math.cos(angle);
 	}
 	
 	public void hit(Player player) {

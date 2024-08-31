@@ -65,7 +65,6 @@ public class GameController extends Thread{
 
 
 	public void updateClient() {
-
 		gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
 		if(dead) {
 			gameFrame.write("YOU DEAD LOL", Color.RED, gameOverFont);
@@ -80,7 +79,8 @@ public class GameController extends Thread{
 		if(!dead) {
 			checkMovement((long)(1e9 / FPS_PLAYER));
 			updatePlayerState((long)(1e9 / FPS_PLAYER));
-		} else if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
+		} 
+		else if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
 			communicator.notifyServer(Command.DISCONNECT);
 		}
 	}
@@ -89,12 +89,12 @@ public class GameController extends Thread{
 	public void checkMovement(long deltaTime) {
 		int dxBefore = me.getDirectionX(), dyBefore = me.getDirectionY();
 
-		if(gameFrame.keyDown.get("right")) me.setDirectionX(1);
-		else if(gameFrame.keyDown.get("left")) me.setDirectionX(-1);
+		if(gameFrame.keyDown.get(GameFrame.Key.RIGHT)) me.setDirectionX(1);
+		else if(gameFrame.keyDown.get(GameFrame.Key.LEFT)) me.setDirectionX(-1);
 		else me.setDirectionX(0);
 
-		if(gameFrame.keyDown.get("down")) me.setDirectionY(1);
-		else if(gameFrame.keyDown.get("up")) me.setDirectionY(-1);
+		if(gameFrame.keyDown.get(GameFrame.Key.DOWN)) me.setDirectionY(1);
+		else if(gameFrame.keyDown.get(GameFrame.Key.UP)) me.setDirectionY(-1);
 		else me.setDirectionY(0);
 
 		if(me.getDirectionX() != dxBefore || me.getDirectionY() != dyBefore) {
@@ -104,7 +104,7 @@ public class GameController extends Thread{
 	}
 
 	public void updatePlayerState(long deltaTime) {
-		if(gameFrame.keyDown.get("space")) {
+		if(gameFrame.keyDown.get(GameFrame.Key.SPACE)) {
 			String cmdString = me.tryToFire();
 			if(cmdString != null) {
 				Command cmd = Command.valueOf(cmdString);
@@ -113,15 +113,14 @@ public class GameController extends Thread{
 		}
 
 		if(mirrorMe.borderCollision()) {
+			System.out.println(mirrorMe.toString());
 			communicator.notifyServer(Command.DEAD);
 			dead = true;
 		}
 
-		if(gameFrame.keyDown.get("esc") || gameFrame.keyDown.get("q")) {
+		if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
 			communicator.notifyServer(Command.DISCONNECT);
 		}
-
-
 	}
 
 	public void updatePlayerMap(String data) {
@@ -150,11 +149,6 @@ public class GameController extends Thread{
 				if (updatedPlayer != null) {
 					updatedPlayer.update(xPos, yPos, dx, dy);
 					updatedPlayer.lastUpdateTime = lastUpdateTime;
-
-					double angle; 
-					if(dx == 0 && dy == 0) angle = 0;
-					else angle = Math.atan2(dy, dx) + Math.PI / 2;
-					updatedPlayer.setSupposedAngle(angle);
 				}
 			}
 			break;
@@ -184,8 +178,10 @@ public class GameController extends Thread{
 
 
 		case CONNECTED:
+			long lastUpdateTime = Long.parseLong(dataList[6]);
 			me = new ClientPlayer(playerID, xPos, yPos, meImage);
 			mirrorMe = new Player(playerID, xPos, yPos, meImage);
+			mirrorMe.lastUpdateTime = lastUpdateTime;
 			playerMap.put(playerID, mirrorMe);
 			this.start();
 			break;

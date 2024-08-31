@@ -59,7 +59,7 @@ public class ServerRender implements Runnable {
 			if(time - player.lastPingTime > Player.TIMEOUT * 1e9 / 2) {
 				Server.notifyClient(Command.PING, "", Server.playerAddresses.get(player));
 				if(time - player.lastPingTime > Player.TIMEOUT * 1e9) {
-					ServerReceiver.disconnect(Server.playerAddresses.get(player));
+					ServerReceiver.disconnectPlayer(Server.playerAddresses.get(player));
 					iterator.remove();
 				}
 			}
