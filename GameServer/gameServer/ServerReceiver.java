@@ -31,7 +31,8 @@ public class ServerReceiver implements Runnable {
 		try {
 			if(!Server.deadPlayersMap.containsKey(playerAddress)) {
 				executeCommand(message, playerAddress);
-			} else {
+			} 
+			else if (Server.deadPlayersMap.containsKey(playerAddress)) {
 				handleDeadPlayerCommand(message, playerAddress);
 			}
 		} catch (Exception e) {e.printStackTrace();}

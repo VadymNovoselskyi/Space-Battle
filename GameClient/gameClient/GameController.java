@@ -5,7 +5,10 @@ import java.awt.event.WindowEvent;
 import java.net.URLDecoder;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -15,12 +18,11 @@ import java.awt.Font;
 import java.awt.Image;
 import javax.swing.ImageIcon;
 
-
 public class GameController extends Thread{
 	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
 	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
 	public static final int FPS_PLAYER = 60, FPS_SERVER = 10;
-	private static final int DATA_FIELDS_COUNT = 7;
+	private static final int DATA_FIELDS_COUNT = 8;
 
 	ScheduledExecutorService executor;
 	private GameFrame gameFrame;
@@ -29,10 +31,11 @@ public class GameController extends Thread{
 	private Player mirrorMe;
 	protected long timeAdjusment = 0;
 
+	private static List<Explosion> explosionList = Collections.synchronizedList(new ArrayList<>());
 	private ConcurrentHashMap<Integer,Player> playerMap = new ConcurrentHashMap<>();
 	private ConcurrentHashMap<Integer, Projectile> projectileMap = new ConcurrentHashMap<>();
 
-	private Image meImage, enemyImage, laserImage, missileImage;
+	private Image meImage, enemyImage, laserImage, missileImage, explosionImage;
 	private Font gameNameFont, gameOverFont;
 	private boolean dead = false;
 
@@ -72,7 +75,9 @@ public class GameController extends Thread{
 			}
 			movePlayers();
 			moveProjectiles();
+			checkExplosions();
 			gameFrame.renderProjectiles(projectileMap);
+			gameFrame.renderExplosions(explosionList);
 			gameFrame.render(playerMap);
 		} catch (Exception e) {e.printStackTrace();}
 	}
@@ -88,7 +93,7 @@ public class GameController extends Thread{
 				executor.shutdown();
 				gameFrame.dispose();
 				System.exit(0);
-				
+
 			}
 		} catch (Exception e) {e.printStackTrace();}
 	}
@@ -138,7 +143,7 @@ public class GameController extends Thread{
 		String[] dataList = data.split(",");
 
 		Command cmd = Command.valueOf(dataList[0]);
-		int playerID = Integer.parseInt(dataList[1]);
+		int id = Integer.parseInt(dataList[1]);
 		int xPos = Integer.parseInt(dataList[2]);
 		int yPos = Integer.parseInt(dataList[3]);
 		double angle = Double.parseDouble(dataList[4]);
@@ -149,7 +154,7 @@ public class GameController extends Thread{
 		switch(cmd) {
 		case UPDATE_ALL: {
 			for(int i = 1; i < dataList.length-1; i += DATA_FIELDS_COUNT ) {
-				playerID = Integer.parseInt(dataList[i]);
+				id = Integer.parseInt(dataList[i]);
 				xPos = Integer.parseInt(dataList[i+1]);
 				yPos = Integer.parseInt(dataList[i+2]);
 				angle = Double.parseDouble(dataList[i+3]);
@@ -157,7 +162,7 @@ public class GameController extends Thread{
 				still = Boolean.parseBoolean(dataList[i+5]);
 				lastUpdateTime = Long.parseLong(dataList[i+6]);
 
-				Player updatedPlayer = playerMap.get(playerID);
+				Player updatedPlayer = playerMap.get(id);
 
 				if (updatedPlayer != null) {
 					updatedPlayer.setStill(still);
@@ -184,44 +189,51 @@ public class GameController extends Thread{
 			break;			
 		}
 
-		case HIT:
-			int projectileID = Integer.parseInt(dataList[1]);
-			projectileMap.remove(projectileID);
+		case HIT: {
+			Projectile projectile = projectileMap.get(id);
+			synchronized(explosionList) {
+				double x = xPos+ projectile.getWidth() / 2 - Math.sin(angle) * (-projectile.getHeight() / 2) - Explosion.WIDTH / 2;
+				double y = yPos + projectile.getHeight() / 2 + Math.cos(angle) * (-projectile.getHeight() / 2) - Explosion.HEIGHT / 2;
+				Explosion explosion = new Explosion((int)x, (int)y, 1, explosionImage);
+				explosion.setStartTime(System.nanoTime());
+				explosionList.add(explosion);
+			}
+			projectileMap.remove(id);
 			break;
-
+		}
 
 		case CONNECTED:
-			me = new ClientPlayer(playerID, xPos, yPos, meImage);
-			mirrorMe = new Player(playerID, xPos, yPos, meImage);
+			me = new ClientPlayer(id, xPos, yPos, meImage);
+			mirrorMe = new Player(id, xPos, yPos, meImage);
 			mirrorMe.lastUpdateTime = lastUpdateTime;
-			playerMap.put(playerID, mirrorMe);
+			playerMap.put(id, mirrorMe);
 			this.start();
 			break;
 
 		case RECEIVE_ALL:
 			for(int i = 1; i < dataList.length-1; i += DATA_FIELDS_COUNT ) {
-				playerID = Integer.valueOf(dataList[i]);
+				id = Integer.valueOf(dataList[i]);
 				xPos = Integer.valueOf(dataList[i+1]);
 				yPos = Integer.valueOf(dataList[i+2]);
 				angle = Double.parseDouble(dataList[i+3]);
 				still = Boolean.parseBoolean(dataList[i+5]);
 				lastUpdateTime = Long.parseLong(dataList[i+6]);
 
-				Player newPlayer = new Player(playerID, xPos, yPos, enemyImage);
-				playerMap.put(playerID, newPlayer);
+				Player newPlayer = new Player(id, xPos, yPos, angle, enemyImage);
+				playerMap.put(id, newPlayer);
 
-				newPlayer.setSupposedAngle(angle);
 				newPlayer.setStill(still);
 				newPlayer.lastUpdateTime = lastUpdateTime;
 			}
 			break;
 
 		case NEW_PLAYER:
-			playerMap.put(playerID, new Player(playerID,xPos, yPos, enemyImage));
+			playerMap.put(id, new Player(id,xPos, yPos, enemyImage));
 			break;
 
 		case REMOVE:
-			playerMap.remove(playerID);
+			if(id == mirrorMe.getPlayerID()) dead = true;
+			playerMap.remove(id);
 			break;
 
 		case DISCONNECT:
@@ -246,6 +258,16 @@ public class GameController extends Thread{
 		}
 	}
 
+	public void checkExplosions() {
+		long currentTime = System.nanoTime();
+		synchronized(explosionList) {			
+			Iterator<Explosion> iterator = explosionList.iterator();
+			while (iterator.hasNext()) {
+				Explosion explosion = iterator.next();
+				if (explosion.getDuration() * 1e9 < currentTime - explosion.getStartTime()) iterator.remove();
+			}
+		}
+	}
 
 
 	public void loadImages() {
@@ -253,6 +275,7 @@ public class GameController extends Thread{
 		enemyImage = new ImageIcon(getClass().getResource("/ship_red.png")).getImage();
 		laserImage = new ImageIcon(getClass().getResource("/laser.png")).getImage();
 		missileImage = new ImageIcon(getClass().getResource("/missile.png")).getImage();
+		explosionImage = new ImageIcon(getClass().getResource("/explosion.png")).getImage();
 
 		Image background = new ImageIcon(getClass().getResource("/background.jpg")).getImage();
 		gameFrame.setBackground(background);

@@ -21,9 +21,13 @@ public class Player {
 	private boolean still = true;
 
 	public Player(int playerID, int xPos, int yPos, Image img) {
+		this(playerID, xPos, yPos, 0, img);
+	}
+	public Player(int playerID, int xPos, int yPos, double angle, Image img) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
+		this.angle = angle;
 		this.img = img;
 	}
 
@@ -94,7 +98,7 @@ public class Player {
 			if (Math.abs(angleDifference) > Math.PI) {
 				angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
 			}
-			if(Math.abs(angleDifference) > Math.PI * 9 / 10) angleDifference = Math.PI;
+			if(Math.abs(angleDifference) > Math.PI * 19 / 20) angleDifference = Math.PI;
 
 			if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / GameController.FPS_PLAYER) {
 				angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / GameController.FPS_PLAYER;

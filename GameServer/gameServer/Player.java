@@ -37,7 +37,7 @@ public class Player {
 			if (Math.abs(angleDifference) > Math.PI) {
 				angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
 			}
-			if(Math.abs(angleDifference) > Math.PI * 9 / 10) angleDifference = Math.PI;
+			if(Math.abs(angleDifference) > Math.PI * 19 / 20) angleDifference = Math.PI;
 
 			if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / Server.FPS_RENDER) {
 				angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / Server.FPS_RENDER;

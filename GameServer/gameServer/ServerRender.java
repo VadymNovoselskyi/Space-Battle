@@ -61,6 +61,7 @@ public class ServerRender implements Runnable {
 			if(time - player.lastPingTime > Player.TIMEOUT * 1e9 / 2) {
 				Server.notifyClient(Command.PING, "", Server.playerAddresses.get(player));
 				if(time - player.lastPingTime > Player.TIMEOUT * 1e9) {
+					System.out.println("No responce on pings");
 					ServerReceiver.disconnectPlayer(Server.playerAddresses.get(player));
 					iterator.remove();
 				}

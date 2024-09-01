@@ -12,8 +12,10 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Color;
 import java.awt.Image;
+import java.awt.RenderingHints;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -67,6 +69,11 @@ public class GameFrame extends JFrame implements KeyListener{
 	public void renderProjectiles(ConcurrentHashMap<Integer, Projectile> projectileMap) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
 		projectileMap.values().forEach(projectile -> projectile.draw(g));
+		g.dispose();
+	}
+	public void renderExplosions(List<Explosion> explosionList) {
+		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
+		explosionList.forEach(explosion -> explosion.draw(g));
 		g.dispose();
 	}
 

@@ -26,7 +26,7 @@ public class Communicator implements Runnable{
 			e.printStackTrace();
 		}
 		gameController.timeAdjusment = getAdjustment() - getLatency();
-		notifyServer(Command.NEW_PLAYER, System.nanoTime() + gameController.timeAdjusment);
+		notifyServer(Command.NEW_PLAYER, System.nanoTime() - gameController.timeAdjusment);
 	}
 
 	@Override
@@ -37,7 +37,7 @@ public class Communicator implements Runnable{
 			socket.receive(receivedPacket);
 			String data = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
 
-			System.out.println(data);
+//			System.out.println(data);
 
 			String[] dataList = data.split(",");
 			Command cmd = Command.valueOf(dataList[0]);

@@ -124,6 +124,14 @@ public class Projectile {
 		return dy;
 	}
 
+	public int getWidth() {
+		return width;
+	}
+
+	public int getHeight() {
+		return height;
+	}
+
 	public void setxPos(double xPos) {
 		this.xPos = xPos;
 	}
