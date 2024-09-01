@@ -11,7 +11,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class Server {
-	protected static final int FPS_SERVER = 12, FPS_RENDER = 60, GAME_WIDTH = 800, GAME_HEIGHT = 600;
+	protected static final int FPS_SERVER = 10, FPS_RENDER = 60, GAME_WIDTH = 800, GAME_HEIGHT = 600;
     private static final int THREAD_POOL_SIZE = 5, NUM_RECEIVERS = 3;
 	protected static int playerID = 1, projectileID = 1;
 
@@ -21,18 +21,18 @@ public class Server {
 	private static ServerSender sender;
 	private static ServerRender render;
 
-	protected static ConcurrentHashMap<Player, String> playerAddresses = new ConcurrentHashMap<>();	
-	protected static ConcurrentHashMap<String, Player> deadPlayersMap = new ConcurrentHashMap<>();
-	protected static ConcurrentHashMap<String, Player> alivePlayersMap = new ConcurrentHashMap<>();
+	protected volatile static ConcurrentHashMap<Player, String> playerAddresses = new ConcurrentHashMap<>();	
+	protected volatile static ConcurrentHashMap<String, Player> deadPlayersMap = new ConcurrentHashMap<>();
+	protected volatile static ConcurrentHashMap<String, Player> alivePlayersMap = new ConcurrentHashMap<>();
 	protected static List<Projectile> projectilesList = Collections.synchronizedList(new ArrayList<>());
 
-	protected static ConcurrentHashMap<String, Player> updatedPlayers = new ConcurrentHashMap<>(); 
+	protected volatile static ConcurrentHashMap<String, Player> updatedPlayers = new ConcurrentHashMap<>(); 
 
 
 	public static void main(String[] args) throws SocketException {
 		executor = Executors.newScheduledThreadPool(THREAD_POOL_SIZE);
 
-		socket = new DatagramSocket(9864);
+		socket = new DatagramSocket(9001);
 		receiver = new ServerReceiver(socket);
 		sender = new ServerSender(socket);
 		render = new ServerRender();

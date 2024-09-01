@@ -3,7 +3,7 @@ package gameClient;
 import java.io.IOException;
 
 public class GameMain {
-	private int port = 9864;
+	private int port = 9001;
 //	private String host = "localhost";
 	private String host = "192.168.1.21";
 

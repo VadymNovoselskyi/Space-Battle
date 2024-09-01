@@ -5,16 +5,16 @@ import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 
 public class Player {
-	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 5;
-	protected static final double MAX_ROTATION_SPEED = Math.PI * 1.8, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 8;
+	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
 	private String playerAddress;
 	private double xPos, yPos;
 	private int dx = 0, dy = 0;
 	protected long lastUpdateTime, lastPingTime;
-	private double angle = 0, supposedAngle;
+	private double angle = 0, supposedAngle = 0;
 	private int health;
-	private boolean isDead = false;
+	private boolean dead = false, still = true;
 
 	public Player(int playerID, int xPos, int yPos) {
 		this.playerID = playerID;
@@ -24,26 +24,30 @@ public class Player {
 	}
 
 	public void move(long deltaTime) {
-		double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
+		try {
+			if(still) return;
+			xPos += (deltaTime/1e9)*SPEED * Math.sin(angle);
+			yPos -= (deltaTime/1e9)*SPEED * Math.cos(angle);
 
-		// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
-		//the shortestroute will always be pi or less, so if angleDifference is more than that
-		//we need to fix it by chnaging its sign and value to 2pi - angle
-		if (Math.abs(angleDifference) > Math.PI) {
-			angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
-		}
-		
-		if(Math.abs(angleDifference * Server.FPS_RENDER) > MAX_ROTATION_SPEED) {
-			angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / Server.FPS_RENDER;
-		}
-		else if (Math.abs(supposedAngle - angle) > JITTER_THRESHOLD) { // A small threshold to stop jitter
-			angle = angle + INTERPOLATION_FACTOR * angleDifference;
-		} else {
-			angle = supposedAngle;
-		}
-		
-		xPos += dx*(deltaTime/1e9)*SPEED * Math.abs(Math.sin(angle));
-		yPos += dy*(deltaTime/1e9)*SPEED * Math.abs(Math.cos(angle));
+			double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
+
+			// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
+			//the shortestroute will always be pi or less, so if angleDifference is more than that
+			//we need to fix it by chnaging its sign and value to 2pi - angle
+			if (Math.abs(angleDifference) > Math.PI) {
+				angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
+			}
+			if(Math.abs(angleDifference) > Math.PI * 9 / 10) angleDifference = Math.PI;
+
+			if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / Server.FPS_RENDER) {
+				angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / Server.FPS_RENDER;
+			}
+			else if (Math.abs(angleDifference) > JITTER_THRESHOLD) { // A small threshold to stop jitter
+				angle = angle + INTERPOLATION_FACTOR * angleDifference;
+			} else {
+				angle = supposedAngle;
+			}
+		} catch (Exception e) {e.printStackTrace();}
 	}
 
 	public void updateDirections(int dx, int dy) {
@@ -51,8 +55,8 @@ public class Player {
 		this.dy = dy;
 		supposedAngle = (dx == 0 && dy == 0) ? angle : Math.atan2(dy, dx) + Math.PI / 2;
 	}
-	
-	public void updateAngle(double angle) {
+
+	public void updateSupposedAngle(double angle) {
 		supposedAngle = angle;
 	}
 
@@ -163,7 +167,7 @@ public class Player {
 	public int getDirectionY() {
 		return dy;
 	}
-	
+
 	public String getPlayerAddress() {
 		return playerAddress;
 	}
@@ -173,8 +177,16 @@ public class Player {
 	}
 
 	public boolean isDead() {
-		return isDead;
+		return dead;
 
+	}
+
+	public boolean isStill() {
+		return still;
+	}
+
+	public void setStill(boolean still) {
+		this.still = still;
 	}
 
 	public void setDirectionX(int dx) {
@@ -188,22 +200,22 @@ public class Player {
 	public void setPlayerAddress(String playerAddress) {
 		this.playerAddress = playerAddress;
 	}
-	
+
 	public void setHealth(int health) {
 		this.health = health;
 	}
 
 	public void setDead(boolean isDead) {
-		this.isDead = isDead;
+		this.dead = isDead;
 	}
 
 	public void ping() {
 		lastPingTime = System.nanoTime();
 	}
-	
+
 
 	@Override
 	public String toString() {
-		return playerID +","+ (int)xPos +","+ (int)yPos +","+ dx +","+ dy +","+ lastUpdateTime;
+		return playerID +","+ (int)xPos +","+ (int)yPos +","+ (angle % (Math.PI * 2)) +","+ (supposedAngle % (Math.PI * 2)) +","+ still +","+ lastUpdateTime +",";
 	}
 }

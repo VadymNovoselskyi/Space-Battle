@@ -15,7 +15,7 @@ public class ServerReceiver implements Runnable {
 	@Override
 	public void run() {
 		//receive
-		byte[] buffer = new byte[64];
+		byte[] buffer = new byte[128];
 		DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 		try {
 			socket.receive(packet);
@@ -25,14 +25,16 @@ public class ServerReceiver implements Runnable {
 		String message = new String(packet.getData(), 0, packet.getLength());
 		String playerAddress = getPlayerAddress(packet);
 
-		//System.out.println("Received from player: " + message +" Address: " +playerAddress);
+//		System.out.println("Received from player: " + message +" Address: " +playerAddress);
 
 		//start proccesing
-		if(!Server.deadPlayersMap.containsKey(playerAddress)) {
-			executeCommand(message, playerAddress);
-		} else {
-			handleDeadPlayerCommand(message, playerAddress);
-		}
+		try {
+			if(!Server.deadPlayersMap.containsKey(playerAddress)) {
+				executeCommand(message, playerAddress);
+			} else {
+				handleDeadPlayerCommand(message, playerAddress);
+			}
+		} catch (Exception e) {e.printStackTrace();}
 	}
 
 	public void executeCommand(String data, String playerAddress) {
@@ -61,44 +63,34 @@ public class ServerReceiver implements Runnable {
 			break;
 
 		case MOVE: {			
-			int dx = Integer.parseInt(dataList[4]);
-			int dy = Integer.parseInt(dataList[5]);
+			double supposedAngle = Double.parseDouble(dataList[4]);
+			boolean still = Boolean.parseBoolean(dataList[5]);
 			long updateTime = Long.parseLong(dataList[6]);
 
 			Player movedPlayer = Server.alivePlayersMap.get(playerAddress);
-			handlePlayerMovementUpdate(playerAddress, updateTime, dx, dy);
-			
-			Server.updatedPlayers.put(playerAddress, movedPlayer);
-			break;
-		}
-		
-		case STOP: {
-			int dx = Integer.parseInt(dataList[4]);
-			int dy = Integer.parseInt(dataList[5]);
-			
-			Player movedPlayer = Server.alivePlayersMap.get(playerAddress);
-			movedPlayer.move(System.nanoTime() - movedPlayer.lastUpdateTime);
-			movedPlayer.updateDirections(dx, dy);
-			movedPlayer.lastUpdateTime = System.nanoTime();
-			
+			if(still) movedPlayer.setStill(true);
+			else {
+				movedPlayer.setStill(false);
+				handlePlayerMovementUpdate(playerAddress, updateTime, supposedAngle);
+			}
+
 			Server.updatedPlayers.put(playerAddress, movedPlayer);
 			break;
 		}
 
 		case FIRE_LASER: {
 			int playerID = Integer.parseInt(dataList[1]);
-			int dx = Integer.parseInt(dataList[4]);
-			int dy = Integer.parseInt(dataList[5]);
-			long updateTime = Long.parseLong(dataList[6]);
+			double supposedAngle = Double.parseDouble(dataList[4]);
+			double angle = Double.parseDouble(dataList[6]);
+			long updateTime = Long.parseLong(dataList[7]);
 
 			Player firedPlayer = Server.alivePlayersMap.get(playerAddress);
-			double angle = (dx == 0 && dy == 0) ? 0 : Math.atan2(dy, dx) + Math.PI / 2;
-			handlePlayerMovementUpdate(playerAddress, updateTime, angle);
+			handlePlayerMovementUpdate(playerAddress, updateTime, supposedAngle);
 
 
 			double x = firedPlayer.getxPos() + Player.HITBOX_WIDTH / 2 - Math.sin(angle) * (-Player.HITBOX_HEIGHT / 2)  - Laser.WIDTH / 2;
 			double y = firedPlayer.getyPos() + Player.HITBOX_HEIGHT / 2 + Math.cos(angle) * (-Player.HITBOX_HEIGHT / 2) - Laser.HEIGHT / 2;
-			Laser newLaser = new Laser(playerID, Server.projectileID++, x, y, dx, dy);
+			Laser newLaser = new Laser(playerID, Server.projectileID++, x, y, angle);
 			Server.projectilesList.add(newLaser);
 
 			Server.notifyAllClients(Command.LASER_FIRED, newLaser.toString());
@@ -107,18 +99,17 @@ public class ServerReceiver implements Runnable {
 
 		case FIRE_MISSILE: {			
 			int playerID = Integer.parseInt(dataList[1]);
-			int dx = Integer.parseInt(dataList[4]);
-			int dy = Integer.parseInt(dataList[5]);
-			long updateTime = Long.parseLong(dataList[6]);
+			double supposedAngle = Double.parseDouble(dataList[4]);
+			double angle = Double.parseDouble(dataList[6]);
+			long updateTime = Long.parseLong(dataList[7]);
 
 			Player firedPlayer = Server.alivePlayersMap.get(playerAddress);;
-			double angle = (dx == 0 && dy == 0) ? 0 : Math.atan2(dy, dx) + Math.PI / 2;
-			handlePlayerMovementUpdate(playerAddress, updateTime, angle);
+			handlePlayerMovementUpdate(playerAddress, updateTime, supposedAngle);
 
 
 			double x = firedPlayer.getxPos()+ Player.HITBOX_WIDTH / 2 - Math.sin(angle) * (-Player.HITBOX_HEIGHT / 2) - Missile.WIDTH / 2;
 			double y = firedPlayer.getyPos() + Player.HITBOX_HEIGHT / 2 + Math.cos(angle) * (-Player.HITBOX_HEIGHT / 2) - Missile.HEIGHT / 2;
-			Missile newMissile = new Missile(playerID, Server.projectileID++, x, y, dx, dy);
+			Missile newMissile = new Missile(playerID, Server.projectileID++, x, y, angle);
 			Server.projectilesList.add(newMissile);
 
 			Server.notifyAllClients(Command.MISSILE_FIRED, newMissile.toString());
@@ -146,32 +137,29 @@ public class ServerReceiver implements Runnable {
 		case DISCONNECT:
 			Player disconnectingPlayer = Server.alivePlayersMap.get(playerAddress);
 			if(disconnectingPlayer == null) disconnectingPlayer = Server.deadPlayersMap.get(playerAddress);
-			Server.playerAddresses.remove(disconnectingPlayer);
 			disconnectPlayer(playerAddress);
+			Server.playerAddresses.remove(disconnectingPlayer);
 			break;
 
 		default:
 			break;
 		}
 	}
-	
-	public void handlePlayerMovementUpdate(String playerAddress, long updateTime, int dx, int dy) {
-		Player movedPlayer = Server.alivePlayersMap.get(playerAddress);;
-		movedPlayer.move(updateTime - movedPlayer.lastUpdateTime);
-		movedPlayer.updateDirections(dx, dy);
-		movedPlayer.move(System.nanoTime() - updateTime);
-		movedPlayer.lastUpdateTime = System.nanoTime();
-	}
+
 	public void handlePlayerMovementUpdate(String playerAddress, long updateTime, double angle) {
-		Player movedPlayer = Server.alivePlayersMap.get(playerAddress);;
+		Player movedPlayer = Server.alivePlayersMap.get(playerAddress);
+		if(movedPlayer == null) return;
+
 		movedPlayer.move(updateTime - movedPlayer.lastUpdateTime);
-		movedPlayer.updateAngle(angle);
+		movedPlayer.updateSupposedAngle(angle);
 		movedPlayer.move(System.nanoTime() - updateTime);
 		movedPlayer.lastUpdateTime = System.nanoTime();
 	}
 
 	public static void disconnectPlayer(String playerAddress) {
 		Player player = Server.alivePlayersMap.get(playerAddress);
+		System.out.println("Disconnecting " +playerAddress);
+
 		if(player == null) {
 			player = Server.deadPlayersMap.get(playerAddress);
 			Server.deadPlayersMap.remove(playerAddress);
@@ -180,9 +168,6 @@ public class ServerReceiver implements Runnable {
 			Server.alivePlayersMap.remove(playerAddress);
 			Server.notifyAllButThis(Command.REMOVE, player.toString(), playerAddress);
 		}
-
-		Server.notifyClient(Command.DISCONNECT, player.toString(), playerAddress);
-		System.out.println("Disconnecting " +player.getID());
 	}
 
 	private String getPlayerAddress(DatagramPacket packet) {
@@ -192,19 +177,21 @@ public class ServerReceiver implements Runnable {
 	}
 
 	private void handleDeadPlayerCommand(String message, String playerAddress) {
-		String[] dataList = message.split(",");
-		Command cmd = Command.valueOf(dataList[0]);
+		try {
+			String[] dataList = message.split(",");
+			Command cmd = Command.valueOf(dataList[0]);
 
-		switch (cmd) {
-		case PING:
-			Server.deadPlayersMap.get(playerAddress).lastPingTime = System.nanoTime();
-			break;
-		case DISCONNECT:
-			disconnectPlayer(playerAddress);
-			break;
-		default:
-			break;
-		}
+			switch (cmd) {
+			case PING:
+				Server.deadPlayersMap.get(playerAddress).lastPingTime = System.nanoTime();
+				break;
+			case DISCONNECT:
+				disconnectPlayer(playerAddress);
+				break;
+			default:
+				break;
+			}
+		}catch (Exception e) {e.printStackTrace();}
 	}
 
 }

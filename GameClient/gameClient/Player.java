@@ -5,17 +5,20 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
+
+import gameServer.Server;
+
 import java.awt.Image;
 
 public class Player {
 	public static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70;
-	protected static final double MAX_ROTATION_SPEED = Math.PI * 1.8, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
+	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
 	private double xPos, yPos;
-	private int dx = 0, dy = 0;
 	protected long lastUpdateTime = 0;
-	private double angle = 0, supposedAngle;
+	protected double angle = 0, supposedAngle;
 	private Image img;
+	private boolean still = true;
 
 	public Player(int playerID, int xPos, int yPos, Image img) {
 		this.playerID = playerID;
@@ -25,8 +28,10 @@ public class Player {
 	}
 
 	public void move(long deltaTime) {
-		xPos += dx*(deltaTime/1e9)*SPEED * Math.abs(Math.sin(angle));
-		yPos += dy*(deltaTime/1e9)*SPEED * Math.abs(Math.cos(angle));
+		if(!still) {			
+			xPos += (deltaTime/1e9)*SPEED * Math.sin(angle);
+			yPos -= (deltaTime/1e9)*SPEED * Math.cos(angle);
+		}
 	}
 
 
@@ -80,22 +85,25 @@ public class Player {
 
 
 	public void draw(Graphics2D g) {
-		double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
+		if(!still) {
+			double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
 
-		// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
-		//the shortestroute will always be pi or less, so if angleDifference is more than that
-		//we need to fix it by chnaging its sign and value to 2pi - angle
-		if (Math.abs(angleDifference) > Math.PI) {
-			angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
-		}
-		
-		if(Math.abs(angleDifference * GameController.FPS_PLAYER) > MAX_ROTATION_SPEED) {
-			angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / GameController.FPS_PLAYER;
-		}
-		else if (Math.abs(supposedAngle - angle) > JITTER_THRESHOLD) { // A small threshold to stop jitter
-			angle = angle + INTERPOLATION_FACTOR * angleDifference;
-		} else {
-			angle = supposedAngle;
+			// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
+			//the shortestroute will always be pi or less, so if angleDifference is more than that
+			//we need to fix it by chnaging its sign and value to 2pi - angle
+			if (Math.abs(angleDifference) > Math.PI) {
+				angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
+			}
+			if(Math.abs(angleDifference) > Math.PI * 9 / 10) angleDifference = Math.PI;
+
+			if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / GameController.FPS_PLAYER) {
+				angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / GameController.FPS_PLAYER;
+			}
+			else if (Math.abs(angleDifference) > JITTER_THRESHOLD) { // A small threshold to stop jitter
+				angle = angle + INTERPOLATION_FACTOR * angleDifference;
+			} else {
+				angle = supposedAngle;
+			}			
 		}
 
 		AffineTransform old = g.getTransform();
@@ -147,19 +155,10 @@ public class Player {
 		return hitbox;
 	}
 
-
-	public void updateDirections(int dx, int dy) {
-		this.dx = dy;
-		this.dy = dy;
-		supposedAngle = (dx == 0 && dy == 0) ? angle : Math.atan2(dy, dx) + Math.PI / 2;
-	}
-
-	public void update(int xPos, int yPos, int dx, int dy) {
+	public void update(int xPos, int yPos, double angle) {
 		this.xPos = xPos;
 		this.yPos = yPos;
-		this.dx = dx;
-		this.dy = dy;
-		supposedAngle = (dx == 0 && dy == 0) ? angle : Math.atan2(dy, dx) + Math.PI / 2;
+		supposedAngle = angle;
 	}
 
 
@@ -167,28 +166,27 @@ public class Player {
 		return playerID;
 	}
 
-	public int getDirectionX() {
-		return dx;
+	public double getAngle() {
+		return angle;
 	}
 
-	public int getDirectionY() {
-		return dy;
+	public boolean isStill() {
+		return still;
 	}
 
 
-	public void setDirectionX(int dx) {
-		this.dx = dx;
+	public void setSupposedAngle(double supposedAngle) {
+		this.supposedAngle = supposedAngle;
 	}
 
-	public void setDirectionY(int dy) {
-		this.dy = dy;
+	public void setStill(boolean still) {
+		this.still = still;
 	}
-
 
 
 	@Override
 	public String toString() {
-		return playerID + "," + (int)xPos + "," + (int)yPos + "," + dx + "," + dy;
+		return playerID + "," + (int)xPos + "," + (int)yPos + "," + supposedAngle +"," + still;
 	}
 }
 

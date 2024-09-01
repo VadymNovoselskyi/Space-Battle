@@ -8,10 +8,12 @@ public class ServerRender implements Runnable {
 
 
 	public void run() {
-		movePlayers();
-		moveProjectiles();
-		checkCollisions();
-		checkTimeout();
+		try {
+			movePlayers();
+			moveProjectiles();
+			checkCollisions();
+			checkTimeout();
+		} catch (Exception e) {e.printStackTrace();}
 	}
 
 

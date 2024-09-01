@@ -13,21 +13,15 @@ public class Projectile {
 	protected long lastUpdateTime;
 	private Image image;
 
-	public Projectile(int projectileID, int xPos, int yPos, int dx, int dy, int width, int height, int speed, Image image) {
+	public Projectile(int projectileID, int xPos, int yPos, double angle, int width, int height, int speed, Image image) {
 		this.projectileID = projectileID;
 		this.xPos = xPos;
 		this.yPos = yPos;
-
-		dy = (dx == 0 && dy == 0) ? -1 : dy;
-		this.dx = dx;
-		this.dy = dy;
+		this.angle = angle;
 		this.width = width;
 		this.height = height;
 		this.speed = speed; 
-		this.image = image;
-
-		if(dx == 0 && dy == 0) angle = 0;
-		else angle = Math.atan2(dy, dx) + Math.PI / 2;	    
+		this.image = image;	    
 	}
 
 	public void move(long deltaTime) {

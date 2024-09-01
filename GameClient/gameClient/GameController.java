@@ -19,8 +19,8 @@ import javax.swing.ImageIcon;
 public class GameController extends Thread{
 	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
 	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
-	public static final int FPS_PLAYER = 60, FPS_SERVER = 12;
-	private static final int DATA_FIELDS_COUNT = 6;
+	public static final int FPS_PLAYER = 60, FPS_SERVER = 10;
+	private static final int DATA_FIELDS_COUNT = 7;
 
 	ScheduledExecutorService executor;
 	private GameFrame gameFrame;
@@ -65,24 +65,32 @@ public class GameController extends Thread{
 
 
 	public void updateClient() {
-		gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
-		if(dead) {
-			gameFrame.write("YOU DEAD LOL", Color.RED, gameOverFont);
-		}
-		movePlayers();
-		moveProjectiles();
-		gameFrame.renderProjectiles(projectileMap);
-		gameFrame.render(playerMap);
+		try {			
+			gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
+			if(dead) {
+				gameFrame.write("YOU DEAD LOL", Color.RED, gameOverFont);
+			}
+			movePlayers();
+			moveProjectiles();
+			gameFrame.renderProjectiles(projectileMap);
+			gameFrame.render(playerMap);
+		} catch (Exception e) {e.printStackTrace();}
 	}
 
-	public void updateServer() {		
-		if(!dead) {
-			checkMovement((long)(1e9 / FPS_PLAYER));
-			updatePlayerState((long)(1e9 / FPS_PLAYER));
-		} 
-		else if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
-			communicator.notifyServer(Command.DISCONNECT);
-		}
+	public void updateServer() {
+		try {
+			if(!dead) {
+				checkMovement((long)(1e9 / FPS_PLAYER));
+				updatePlayerState((long)(1e9 / FPS_PLAYER));
+			} 
+			else if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
+				communicator.notifyServer(Command.DISCONNECT);
+				executor.shutdown();
+				gameFrame.dispose();
+				System.exit(0);
+				
+			}
+		} catch (Exception e) {e.printStackTrace();}
 	}
 
 
@@ -108,7 +116,7 @@ public class GameController extends Thread{
 			String cmdString = me.tryToFire();
 			if(cmdString != null) {
 				Command cmd = Command.valueOf(cmdString);
-				communicator.notifyServer(cmd, me.toString(), System.nanoTime() - timeAdjusment);
+				communicator.notifyServer(cmd, me.toString() +","+ String.valueOf(mirrorMe.getAngle()), System.nanoTime() - timeAdjusment);
 			}
 		}
 
@@ -120,6 +128,9 @@ public class GameController extends Thread{
 
 		if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
 			communicator.notifyServer(Command.DISCONNECT);
+			executor.shutdown();
+			gameFrame.dispose();
+			System.exit(0);
 		}
 	}
 
@@ -130,24 +141,28 @@ public class GameController extends Thread{
 		int playerID = Integer.parseInt(dataList[1]);
 		int xPos = Integer.parseInt(dataList[2]);
 		int yPos = Integer.parseInt(dataList[3]);
-		int dx = Integer.parseInt(dataList[4]);
-		int dy = Integer.parseInt(dataList[5]);
+		double angle = Double.parseDouble(dataList[4]);
+		double supposedAngle = Double.parseDouble(dataList[5]);
+		boolean still = Boolean.parseBoolean(dataList[6]);
+		long lastUpdateTime = Long.parseLong(dataList[7]);
 
 		switch(cmd) {
 		case UPDATE_ALL: {
-			long lastUpdateTime;
 			for(int i = 1; i < dataList.length-1; i += DATA_FIELDS_COUNT ) {
 				playerID = Integer.parseInt(dataList[i]);
 				xPos = Integer.parseInt(dataList[i+1]);
 				yPos = Integer.parseInt(dataList[i+2]);
-				dx = Integer.parseInt(dataList[i+3]);
-				dy = Integer.parseInt(dataList[i+4]);
-				lastUpdateTime = Long.parseLong(dataList[i+5]);
+				angle = Double.parseDouble(dataList[i+3]);
+				supposedAngle = Double.parseDouble(dataList[i+4]);
+				still = Boolean.parseBoolean(dataList[i+5]);
+				lastUpdateTime = Long.parseLong(dataList[i+6]);
 
 				Player updatedPlayer = playerMap.get(playerID);
 
 				if (updatedPlayer != null) {
-					updatedPlayer.update(xPos, yPos, dx, dy);
+					updatedPlayer.setStill(still);
+					updatedPlayer.update(xPos, yPos, supposedAngle);
+					updatedPlayer.angle = angle;
 					updatedPlayer.lastUpdateTime = lastUpdateTime;
 				}
 			}
@@ -155,8 +170,7 @@ public class GameController extends Thread{
 		}
 		case LASER_FIRED: {			
 			int projectileID = Integer.parseInt(dataList[1]);
-			long lastUpdateTime = Long.parseLong(dataList[6]);
-			Laser newLaser = new Laser(projectileID, xPos, yPos, dx, dy, laserImage);
+			Laser newLaser = new Laser(projectileID, xPos, yPos, angle, laserImage);
 			projectileMap.put(projectileID, newLaser);
 			newLaser.lastUpdateTime = lastUpdateTime;
 			break;
@@ -164,8 +178,7 @@ public class GameController extends Thread{
 
 		case MISSILE_FIRED: {
 			int projectileID = Integer.parseInt(dataList[1]);
-			long lastUpdateTime = Long.parseLong(dataList[6]);
-			Missile newMissile =new Missile(projectileID, xPos, yPos, dx, dy, missileImage);
+			Missile newMissile = new Missile(projectileID, xPos, yPos, angle, missileImage);
 			projectileMap.put(projectileID, newMissile);
 			newMissile.lastUpdateTime = lastUpdateTime;
 			break;			
@@ -178,7 +191,6 @@ public class GameController extends Thread{
 
 
 		case CONNECTED:
-			long lastUpdateTime = Long.parseLong(dataList[6]);
 			me = new ClientPlayer(playerID, xPos, yPos, meImage);
 			mirrorMe = new Player(playerID, xPos, yPos, meImage);
 			mirrorMe.lastUpdateTime = lastUpdateTime;
@@ -191,8 +203,16 @@ public class GameController extends Thread{
 				playerID = Integer.valueOf(dataList[i]);
 				xPos = Integer.valueOf(dataList[i+1]);
 				yPos = Integer.valueOf(dataList[i+2]);
+				angle = Double.parseDouble(dataList[i+3]);
+				still = Boolean.parseBoolean(dataList[i+5]);
+				lastUpdateTime = Long.parseLong(dataList[i+6]);
 
-				playerMap.put(playerID, new Player(playerID, xPos, yPos, enemyImage));
+				Player newPlayer = new Player(playerID, xPos, yPos, enemyImage);
+				playerMap.put(playerID, newPlayer);
+
+				newPlayer.setSupposedAngle(angle);
+				newPlayer.setStill(still);
+				newPlayer.lastUpdateTime = lastUpdateTime;
 			}
 			break;
 
@@ -206,6 +226,7 @@ public class GameController extends Thread{
 
 		case DISCONNECT:
 			executor.shutdown();
+			gameFrame.dispose();
 			System.exit(0);
 		default:
 		}

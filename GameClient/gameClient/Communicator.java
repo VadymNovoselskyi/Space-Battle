@@ -18,11 +18,11 @@ public class Communicator implements Runnable{
 		this.host = host;
 		this.port = port;
 		this.gameController = gameController;
-		
+
 		socket = new DatagramSocket();
 		try {
 			serverAddress = InetAddress.getByName(host);
-		} catch (UnknownHostException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		gameController.timeAdjusment = getAdjustment() - getLatency();
@@ -32,19 +32,19 @@ public class Communicator implements Runnable{
 	@Override
 	public void run() {
 		try {
-			byte[] receiveData = new byte[256];			
+			byte[] receiveData = new byte[512];			
 			DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 			socket.receive(receivedPacket);
 			String data = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
 
-//			System.out.println(data);
+			System.out.println(data);
 
 			String[] dataList = data.split(",");
 			Command cmd = Command.valueOf(dataList[0]);
 			if(cmd == Command.PING) notifyServer(Command.PING);
 			else gameController.updatePlayerMap(data);
 		}catch (IOException e) {
-			closeConnection();
+			e.printStackTrace();;
 		}
 	}
 
@@ -104,7 +104,7 @@ public class Communicator implements Runnable{
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < 20; i++) {
 			long clientSendTime = System.nanoTime();
 
 			byte[] sendData = String.valueOf(Command.GET_SERVER_TIME).getBytes();

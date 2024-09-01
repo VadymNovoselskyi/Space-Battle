@@ -9,21 +9,16 @@ public class Projectile {
 	private double xPos, yPos, angle;
 	protected long lastUpdateTime;
 	
-	public Projectile(int playerID, int projectileID, double xPos, double yPos, int dx, int dy, int width, int height, int speed) {
+	public Projectile(int playerID, int projectileID, double xPos, double yPos, double angle, int width, int height, int speed) {
 		this.playerID = playerID; 
 		this.projectileID = projectileID;
 		this.xPos = xPos;
 		this.yPos = yPos;
-		
-		dy = (dx == 0 && dy == 0) ? -1 : dy;
-		this.dx = dx;
-		this.dy = dy;
+		this.angle = angle;
 		this.width = width;
 		this.height = height;
 		this.speed = speed;
-		
-	    if(dx == 0 && dy == 0) angle = 0;
-	    else angle = Math.atan2(dy, dx) + Math.PI / 2;
+
 	    lastUpdateTime = System.nanoTime();
 	}
 	
@@ -94,7 +89,7 @@ public class Projectile {
 	
 	@Override
 	public String toString() {
-		return projectileID +","+ (int)xPos +","+ (int)yPos +","+ dx +","+ dy +","+ lastUpdateTime; 
+		return projectileID +","+ (int)xPos +","+ (int)yPos +","+ (angle % (Math.PI * 2)) +","+ 0.0 +","+ true +","+ lastUpdateTime; 
 	}
 
 	public double getxPos() {
