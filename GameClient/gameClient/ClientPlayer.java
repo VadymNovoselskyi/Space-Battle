@@ -9,8 +9,8 @@ public class ClientPlayer extends Player {
 	private int shotCounter = 0;
 	private long lastShotTime;
 
-	public ClientPlayer(int playerID, int xPos, int yPos, Image image) {
-		super(playerID, xPos, yPos, image);
+	public ClientPlayer(int playerID, int xPos, int yPos, double angle, Image image) {
+		super(playerID, xPos, yPos, angle, image);
 		lastShotTime = System.nanoTime();
 	}
 

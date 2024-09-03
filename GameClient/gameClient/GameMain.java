@@ -18,11 +18,5 @@ public class GameMain {
 
 	public static void main(String[] args) {
 		new GameMain();
-		for(int i = 0; i < 200; i++) {
-			try {				
-				Thread.sleep(50);
-			} catch(Exception e) {}
-			new SpawnTest(host, port);
-		}
 	}
 }

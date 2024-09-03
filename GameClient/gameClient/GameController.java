@@ -203,8 +203,8 @@ public class GameController extends Thread{
 		}
 
 		case CONNECTED:
-			me = new ClientPlayer(id, xPos, yPos, meImage);
-			mirrorMe = new Player(id, xPos, yPos, meImage);
+			me = new ClientPlayer(id, xPos, yPos, angle, meImage);
+			mirrorMe = new Player(id, xPos, yPos, angle, meImage);
 			mirrorMe.lastUpdateTime = lastUpdateTime;
 			playerMap.put(id, mirrorMe);
 			this.start();
@@ -228,7 +228,7 @@ public class GameController extends Thread{
 			break;
 
 		case NEW_PLAYER:
-			playerMap.put(id, new Player(id,xPos, yPos, enemyImage));
+			playerMap.put(id, new Player(id, xPos, yPos, angle, enemyImage));
 			break;
 
 		case REMOVE:

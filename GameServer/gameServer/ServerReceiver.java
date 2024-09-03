@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.util.Random;
 
 public class ServerReceiver implements Runnable {
-	private static final int SPAWN_OFFSET = 75, SPAWN_X_r = Server.GAME_HEIGHT / 20, SPAWN_Y_r = Server.GAME_WIDTH / 20, SPAWN_X_R = Server.GAME_HEIGHT / 2 - SPAWN_OFFSET - SPAWN_X_r, SPAWN_Y_R = Server.GAME_WIDTH / 2 - SPAWN_OFFSET - SPAWN_Y_r;
+	private static final int SPAWN_CALCULATION_ATTEMPTS = 250, SPAWN_OFFSET = 75, SPAWN_X_r = Server.GAME_HEIGHT / 20, SPAWN_Y_r = Server.GAME_WIDTH / 20, SPAWN_X_R = Server.GAME_HEIGHT / 2 - SPAWN_OFFSET - SPAWN_X_r, SPAWN_Y_R = Server.GAME_WIDTH / 2 - SPAWN_OFFSET - SPAWN_Y_r;
 	private static Random random = new Random();
 	private DatagramSocket socket;
 
@@ -28,7 +28,7 @@ public class ServerReceiver implements Runnable {
 		String message = new String(packet.getData(), 0, packet.getLength());
 		String playerAddress = getPlayerAddress(packet);
 
-//		System.out.println("Received from player: " + message +" Address: " +playerAddress);
+		//		System.out.println("Received from player: " + message +" Address: " +playerAddress);
 
 		//start proccesing
 		try {
@@ -46,10 +46,11 @@ public class ServerReceiver implements Runnable {
 		Command cmd = Command.valueOf(dataList[0]);
 
 		switch(cmd) {
-		case NEW_PLAYER:
+		case NEW_PLAYER: {			
 			System.out.println("PlayerID: " + Server.playerID + " Connected to server");
-			int[] coords = getSpawnCoords();
-			Player newPlayer = new Player(Server.playerID, coords[0], coords[1]);
+			int[] coords = generateSpawnPoint();
+			double angle = Math.atan2(Server.GAME_HEIGHT / 2 - coords[1], Server.GAME_WIDTH / 2 - coords[0]) + Math.PI / 2;
+			Player newPlayer = new Player(Server.playerID, coords[0], coords[1], angle);
 			newPlayer.lastUpdateTime = Long.parseLong(dataList[1]);
 			newPlayer.lastPingTime = Long.parseLong(dataList[1]);
 			newPlayer.setPlayerAddress(playerAddress);
@@ -66,6 +67,7 @@ public class ServerReceiver implements Runnable {
 			Server.playerAddresses.put(newPlayer, playerAddress);
 			Server.notifyAllButThis(cmd, newPlayer.toString(), playerAddress);
 			break;
+		}
 
 		case MOVE: {			
 			double supposedAngle = Double.parseDouble(dataList[4]);
@@ -198,15 +200,41 @@ public class ServerReceiver implements Runnable {
 			}
 		}catch (Exception e) {e.printStackTrace();}
 	}
-	
-	private int[] getSpawnCoords() {
-		int[] coords = new int[2];
-        double theta = random.nextDouble() * 2 * Math.PI;
-        double phi = random.nextDouble() * 2 * Math.PI;
 
-        coords[0] = (int) ((SPAWN_Y_R + SPAWN_Y_r * Math.cos(theta)) * Math.sin(phi)) +Server.GAME_WIDTH / 2 - Player.HITBOX_WIDTH / 2;
-        coords[1] = (int) ((SPAWN_X_R + SPAWN_X_r * Math.cos(theta)) * Math.cos(phi)) +Server.GAME_HEIGHT / 2 - Player.HITBOX_HEIGHT / 2;
-		return coords;
+	public static int[] generateSpawnPoint() {
+		int[] optimalCoords = new int[2];
+		double maxMinDistance = Double.MIN_VALUE;
+		long time = System.nanoTime();
+
+		for (int i = 0; i < SPAWN_CALCULATION_ATTEMPTS; i++) {
+			double theta = random.nextDouble() * 2 * Math.PI;
+			double phi = random.nextDouble() * 2 * Math.PI;
+
+			int x = (int) ((SPAWN_Y_R + SPAWN_Y_r * Math.cos(theta)) * Math.sin(phi)) + Server.GAME_WIDTH / 2 - Player.HITBOX_WIDTH / 2;
+			int y = (int) ((SPAWN_X_R + SPAWN_X_r * Math.cos(theta)) * Math.cos(phi)) + Server.GAME_HEIGHT / 2 - Player.HITBOX_HEIGHT / 2;
+
+			double minDistance = calculateMinDistance(x, y);
+
+			if (minDistance > maxMinDistance) {
+				maxMinDistance = minDistance;
+				optimalCoords[0] = x;
+				optimalCoords[1] = y;
+			}
+		}
+		return optimalCoords;
 	}
 
+	private static double calculateMinDistance(int x, int y) {
+		double minDistance = Double.MAX_VALUE;
+
+		for (Player player : Server.alivePlayersMap.values()) {
+			int[] position = {(int) player.getxPos(), (int) player.getyPos()};
+			double distance = Math.sqrt(Math.pow(position[0] - x, 2) + Math.pow(position[1] - y, 2));
+			if (distance < minDistance) {
+				minDistance = distance;
+			}
+		}
+
+		return minDistance;
+	}
 }

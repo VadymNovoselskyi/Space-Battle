@@ -5,21 +5,24 @@ import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 
 public class Player {
-	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 8;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 80;
 	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
 	private String playerAddress;
 	private double xPos, yPos;
-	private int dx = 0, dy = 0;
 	protected long lastUpdateTime, lastPingTime;
-	private double angle = 0, supposedAngle = 0;
+	private double angle, supposedAngle;
 	private int health;
 	private boolean dead = false, still = true;
 
 	public Player(int playerID, int xPos, int yPos) {
+		this(playerID, xPos, yPos, 0);
+	}
+	public Player(int playerID, int xPos, int yPos, double angle) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
+		this.angle = angle;
 		this.health = 10;
 	}
 
@@ -48,12 +51,6 @@ public class Player {
 				angle = supposedAngle;
 			}
 		} catch (Exception e) {e.printStackTrace();}
-	}
-
-	public void updateDirections(int dx, int dy) {
-		this.dx = dx;
-		this.dy = dy;
-		supposedAngle = (dx == 0 && dy == 0) ? angle : Math.atan2(dy, dx) + Math.PI / 2;
 	}
 
 	public void updateSupposedAngle(double angle) {
@@ -160,14 +157,9 @@ public class Player {
 		return yPos;
 	}
 
-	public int getDirectionX() {
-		return dx;
+	public double getAngle() {
+		return angle;
 	}
-
-	public int getDirectionY() {
-		return dy;
-	}
-
 	public String getPlayerAddress() {
 		return playerAddress;
 	}
@@ -187,14 +179,6 @@ public class Player {
 
 	public void setStill(boolean still) {
 		this.still = still;
-	}
-
-	public void setDirectionX(int dx) {
-		this.dx = dx;
-	}
-
-	public void setDirectionY(int dy) {
-		this.dy = dy;
 	}
 
 	public void setPlayerAddress(String playerAddress) {
