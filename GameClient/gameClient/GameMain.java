@@ -3,9 +3,9 @@ package gameClient;
 import java.io.IOException;
 
 public class GameMain {
-	private int port = 9001;
-//	private String host = "localhost";
-	private String host = "192.168.1.21";
+	private static int port = 9001;
+	private static String host = "localhost";
+//	private String host = "192.168.1.21";
 
 	public GameMain() {
 		//host = JOptionPane.showInputDialog("Server Adress");
@@ -18,5 +18,11 @@ public class GameMain {
 
 	public static void main(String[] args) {
 		new GameMain();
+		for(int i = 0; i < 200; i++) {
+			try {				
+				Thread.sleep(50);
+			} catch(Exception e) {}
+			new SpawnTest(host, port);
+		}
 	}
 }

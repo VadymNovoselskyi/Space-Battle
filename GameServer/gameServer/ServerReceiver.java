@@ -3,8 +3,11 @@ package gameServer;
 import java.net.DatagramSocket;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.util.Random;
 
 public class ServerReceiver implements Runnable {
+	private static final int SPAWN_OFFSET = 75, SPAWN_X_r = Server.GAME_HEIGHT / 20, SPAWN_Y_r = Server.GAME_WIDTH / 20, SPAWN_X_R = Server.GAME_HEIGHT / 2 - SPAWN_OFFSET - SPAWN_X_r, SPAWN_Y_R = Server.GAME_WIDTH / 2 - SPAWN_OFFSET - SPAWN_Y_r;
+	private static Random random = new Random();
 	private DatagramSocket socket;
 
 	public ServerReceiver(DatagramSocket socket) {
@@ -45,7 +48,8 @@ public class ServerReceiver implements Runnable {
 		switch(cmd) {
 		case NEW_PLAYER:
 			System.out.println("PlayerID: " + Server.playerID + " Connected to server");
-			Player newPlayer = new Player(Server.playerID, (int)(Math.random()*500 + 150), (int)(Math.random()*400 + 100));
+			int[] coords = getSpawnCoords();
+			Player newPlayer = new Player(Server.playerID, coords[0], coords[1]);
 			newPlayer.lastUpdateTime = Long.parseLong(dataList[1]);
 			newPlayer.lastPingTime = Long.parseLong(dataList[1]);
 			newPlayer.setPlayerAddress(playerAddress);
@@ -193,6 +197,16 @@ public class ServerReceiver implements Runnable {
 				break;
 			}
 		}catch (Exception e) {e.printStackTrace();}
+	}
+	
+	private int[] getSpawnCoords() {
+		int[] coords = new int[2];
+        double theta = random.nextDouble() * 2 * Math.PI;
+        double phi = random.nextDouble() * 2 * Math.PI;
+
+        coords[0] = (int) ((SPAWN_Y_R + SPAWN_Y_r * Math.cos(theta)) * Math.sin(phi)) +Server.GAME_WIDTH / 2 - Player.HITBOX_WIDTH / 2;
+        coords[1] = (int) ((SPAWN_X_R + SPAWN_X_r * Math.cos(theta)) * Math.cos(phi)) +Server.GAME_HEIGHT / 2 - Player.HITBOX_HEIGHT / 2;
+		return coords;
 	}
 
 }

@@ -32,7 +32,7 @@ public class Communicator implements Runnable{
 	@Override
 	public void run() {
 		try {
-			byte[] receiveData = new byte[512];			
+			byte[] receiveData = new byte[5296];			
 			DatagramPacket receivedPacket = new DatagramPacket(receiveData, receiveData.length);
 			socket.receive(receivedPacket);
 			String data = new String(receivedPacket.getData(), 0, receivedPacket.getLength());
