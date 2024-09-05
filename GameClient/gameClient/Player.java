@@ -11,12 +11,12 @@ import gameServer.Server;
 import java.awt.Image;
 
 public class Player {
-	public static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70;
 	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
-	private double xPos, yPos;
+	protected double xPos, yPos, xOffset, yOffset;
 	protected long lastUpdateTime = 0;
-	protected double angle = 0, supposedAngle;
+	private double angle = 0, supposedAngle;
 	private Image img;
 	private boolean still = true;
 
@@ -35,6 +35,21 @@ public class Player {
 		if(!still) {			
 			xPos += (deltaTime/1e9)*SPEED * Math.sin(angle);
 			yPos -= (deltaTime/1e9)*SPEED * Math.cos(angle);
+			System.out.println("Before Update:");
+			System.out.println("xPos: " + xPos + ", yPos: " + yPos);
+			System.out.println("xOffset: " + xOffset + ", yOffset: " + yOffset);
+
+			// Your existing update code here
+			xPos = (Math.abs(xOffset) < 10) ? xPos + Math.signum(xOffset) * xOffset : xPos + xOffset * 0.5;
+			yPos = (Math.abs(yOffset) < 10) ? yPos + Math.signum(yOffset) * yOffset : yPos + yOffset * 0.5;
+
+			xOffset = (Math.abs(xOffset) < 10) ? 0 : xOffset - xOffset * 0.5;
+			yOffset = (Math.abs(yOffset) < 10) ? 0 : yOffset - yOffset * 0.5;
+
+			System.out.println("After Update:");
+			System.out.println("xPos: " + xPos + ", yPos: " + yPos);
+			System.out.println("xOffset: " + xOffset + ", yOffset: " + yOffset);
+
 		}
 	}
 
@@ -91,7 +106,7 @@ public class Player {
 	public void draw(Graphics2D g) {
 		if(!still) {
 			double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
-
+			
 			// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
 			//the shortestroute will always be pi or less, so if angleDifference is more than that
 			//we need to fix it by chnaging its sign and value to 2pi - angle
@@ -107,7 +122,8 @@ public class Player {
 				angle = angle + INTERPOLATION_FACTOR * angleDifference;
 			} else {
 				angle = supposedAngle;
-			}			
+
+			}
 		}
 
 		AffineTransform old = g.getTransform();
@@ -159,10 +175,11 @@ public class Player {
 		return hitbox;
 	}
 
-	public void update(int xPos, int yPos, double angle) {
+	public void update(int xPos, int yPos, double angle, double supposedAngle) {
 		this.xPos = xPos;
 		this.yPos = yPos;
-		supposedAngle = angle;
+		this.angle = angle;
+		this.supposedAngle = supposedAngle;
 	}
 
 

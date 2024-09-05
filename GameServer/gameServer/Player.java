@@ -5,7 +5,7 @@ import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 
 public class Player {
-	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 80;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, TIMEOUT = 8;
 	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
 	private String playerAddress;
@@ -31,26 +31,30 @@ public class Player {
 			if(still) return;
 			xPos += (deltaTime/1e9)*SPEED * Math.sin(angle);
 			yPos -= (deltaTime/1e9)*SPEED * Math.cos(angle);
+			updateAngle();
 
-			double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
-
-			// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
-			//the shortestroute will always be pi or less, so if angleDifference is more than that
-			//we need to fix it by chnaging its sign and value to 2pi - angle
-			if (Math.abs(angleDifference) > Math.PI) {
-				angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
-			}
-			if(Math.abs(angleDifference) > Math.PI * 19 / 20) angleDifference = Math.PI;
-
-			if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / Server.FPS_RENDER) {
-				angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / Server.FPS_RENDER;
-			}
-			else if (Math.abs(angleDifference) > JITTER_THRESHOLD) { // A small threshold to stop jitter
-				angle = angle + INTERPOLATION_FACTOR * angleDifference;
-			} else {
-				angle = supposedAngle;
-			}
 		} catch (Exception e) {e.printStackTrace();}
+	}
+	
+	private void updateAngle() {
+		double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
+
+		// Ensure angleDifference is within [-π, π] so the ship takes the shortest path
+		//the shortestroute will always be pi or less, so if angleDifference is more than that
+		//we need to fix it by chnaging its sign and value to 2pi - angle
+		if (Math.abs(angleDifference) > Math.PI) {
+			angleDifference -= Math.signum(angleDifference) * 2 * Math.PI;
+		}
+		if(Math.abs(angleDifference) > Math.PI * 19 / 20) angleDifference = Math.PI;
+
+		if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / Server.FPS_RENDER) {
+			angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / Server.FPS_RENDER;
+		}
+		else if (Math.abs(angleDifference) > JITTER_THRESHOLD) { // A small threshold to stop jitter
+			angle = angle + INTERPOLATION_FACTOR * angleDifference;
+		} else {
+			angle = supposedAngle;
+		}
 	}
 
 	public void updateSupposedAngle(double angle) {
