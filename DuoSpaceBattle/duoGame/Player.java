@@ -1,30 +1,33 @@
-package gameClient;
+package duoGame;
 
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
-
-import gameServer.Server;
+import java.util.ArrayList;
 
 import java.awt.Image;
 
 public class Player {
-	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70;
-	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
-	private int playerID;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, SHOTS_FOR_MISSILE = 3;
+	protected static final double SHOT_COOLDOWN = 1.4, MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
+	
+	private ArrayList<Explosion> explosionList = new ArrayList<>();
+	
 	private double xPos, yPos;
+	private int dx, dy;
 	protected long lastUpdateTime = 0;
 	private double angle = 0, supposedAngle;
 	private Image img;
-	private boolean still = true;
+	private boolean dead = false, still = true;
+	private int shotCounter = 0;
+	private long lastShotTime;
 
-	public Player(int playerID, int xPos, int yPos, Image img) {
-		this(playerID, xPos, yPos, 0, img);
+	public Player(int xPos, int yPos, Image img) {
+		this(xPos, yPos, 0, img);
 	}
-	public Player(int playerID, int xPos, int yPos, double angle, Image img) {
-		this.playerID = playerID;
+	public Player(int xPos, int yPos, double angle, Image img) {
 		this.xPos = xPos;
 		this.yPos = yPos;
 		this.angle = angle;
@@ -38,6 +41,14 @@ public class Player {
 		}
 	}
 
+	public void tryToFire() {
+		if(System.nanoTime() - lastShotTime > SHOT_COOLDOWN * 1e9) {
+			lastShotTime = System.nanoTime();
+			shotCounter++;
+			if(shotCounter % SHOTS_FOR_MISSILE == 0) explosionList.add(new Missile());
+			else explosionList.add(new Laser());
+		}
+	}
 
 	public boolean collision(Player player) {
 		Path2D myHitbox = this.getHitbox();
@@ -100,8 +111,8 @@ public class Player {
 			}
 			if(Math.abs(angleDifference) > Math.PI * 19 / 20) angleDifference = Math.PI;
 
-			if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / GameController.FPS_PLAYER) {
-				angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / GameController.FPS_PLAYER;
+			if(Math.abs(angleDifference * INTERPOLATION_FACTOR) > MAX_ROTATION_SPEED / GameController.FPS) {
+				angle += Math.signum(angleDifference) * MAX_ROTATION_SPEED / GameController.FPS;
 			}
 			else if (Math.abs(angleDifference) > JITTER_THRESHOLD) { // A small threshold to stop jitter
 				angle = angle + INTERPOLATION_FACTOR * angleDifference;
@@ -167,11 +178,6 @@ public class Player {
 		this.supposedAngle = supposedAngle;
 	}
 
-
-	public int getPlayerID() {
-		return playerID;
-	}
-
 	public double getAngle() {
 		return angle;
 	}
@@ -180,7 +186,14 @@ public class Player {
 		return still;
 	}
 
+	public int getDirectionX() {
+		return dx;
+	}
+	public int getDirectionY() {
+		return dy;
+	}
 
+	
 	public void setSupposedAngle(double supposedAngle) {
 		this.supposedAngle = supposedAngle;
 	}
@@ -189,10 +202,18 @@ public class Player {
 		this.still = still;
 	}
 
-
+	public void setDead(boolean dead) {
+		this.dead = dead;
+	}
+	public void setDirectionX(int dx) {
+		this.dx = dx;
+	}
+	public void setDirectionY(int dy) {
+		this.dy = dy;
+	}
 	@Override
 	public String toString() {
-		return playerID + "," + (int)xPos + "," + (int)yPos + "," + supposedAngle +"," + still;
+		return (int)xPos + "," + (int)yPos + "," + supposedAngle +"," + still;
 	}
 }
 

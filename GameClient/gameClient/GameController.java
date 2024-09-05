@@ -21,7 +21,7 @@ import javax.swing.ImageIcon;
 public class GameController extends Thread{
 	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
 	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
-	public static final int FPS_PLAYER = 60, FPS_SERVER = 4;
+	public static final int FPS_PLAYER = 60, FPS_SERVER = 12;
 	private static final int DATA_FIELDS_COUNT = 8;
 
 	ScheduledExecutorService executor;
@@ -166,9 +166,7 @@ public class GameController extends Thread{
 
 				if (updatedPlayer != null) {
 					updatedPlayer.setStill(still);
-					updatedPlayer.update((int)updatedPlayer.xPos, (int)updatedPlayer.yPos, angle, supposedAngle);
-					updatedPlayer.xOffset += xPos - updatedPlayer.xPos;
-					updatedPlayer.yOffset += yPos - updatedPlayer.yPos;
+					updatedPlayer.update(xPos, yPos, angle, supposedAngle);
 					updatedPlayer.lastUpdateTime = lastUpdateTime;
 				}
 			}
