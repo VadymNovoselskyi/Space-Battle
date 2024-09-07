@@ -21,13 +21,17 @@ public class Projectile {
 		this.width = width;
 		this.height = height;
 		this.speed = speed; 
-		this.image = image;	    
+		this.image = image;	 
+		
+		this.lastUpdateTime = System.nanoTime();
 	}
 
 	public void move(long deltaTime) {
 		xPos += (deltaTime/1e9)*speed * Math.sin(angle);
 		yPos -= (deltaTime/1e9)*speed * Math.cos(angle);
 	}
+	
+	public void hit(Player player) {}
 
 	public void draw(Graphics2D g) {
 		AffineTransform old = g.getTransform();
@@ -106,6 +110,10 @@ public class Projectile {
 
 	public int getProjectileID() {
 		return projectileID;
+	}
+
+	public double getAngle() {
+		return angle;
 	}
 
 	public double getxPos() {

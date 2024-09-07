@@ -6,6 +6,7 @@ import java.net.URLDecoder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,7 +18,8 @@ import java.awt.Font;
 import java.awt.Image;
 import javax.swing.ImageIcon;
 
-public class GameController extends Thread{
+
+public class GameController {
 	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
 	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
 	public static final int FPS = 60;
@@ -27,11 +29,10 @@ public class GameController extends Thread{
 	private Player playerArrows;
 	private Player playerKeys;
 
-	private List<Explosion> explosionList = new ArrayList<>();
-	private ConcurrentHashMap<Integer,Player> playerMap = new ConcurrentHashMap<>();
-	private ConcurrentHashMap<Integer, Projectile> projectileList = new ConcurrentHashMap<>();
+	protected static HashMap<Projectile, Player> projectileMap = new HashMap<>();
+	private static ArrayList<Explosion> explosionList = new ArrayList<>();
 
-	private Image playerKeysImage, playerArrowsImage, laserImage, missileImage, explosionImage;
+	protected static Image playerKeysImage, playerArrowsImage, laserImage, missileImage, explosionImage;
 	private Font gameNameFont, gameOverFont;
 	private boolean dead = false;
 
@@ -40,6 +41,11 @@ public class GameController extends Thread{
 		gameFrame = new GameFrame(GAME_WIDTH, GAME_HEIGHT);
 		loadImages();
 		loadFonts();
+		playerArrows = new Player(500, 500, Math.PI * 7 / 4, playerKeysImage);
+		playerKeys = new Player(100, 100, Math.PI * 3 / 4, playerArrowsImage);
+
+		Runnable clientTask = () -> updateClient();
+		executor.scheduleAtFixedRate(clientTask, 0, 1000 / FPS, TimeUnit.MILLISECONDS);
 
 		gameFrame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
@@ -50,26 +56,20 @@ public class GameController extends Thread{
 		});
 	}
 
-
-	@Override
-	public void run() {
-		Runnable clientTask = () -> updateClient();
-		executor.scheduleAtFixedRate(clientTask, 0, 1000 / FPS, TimeUnit.MILLISECONDS);
-	}
-
-
 	public void updateClient() {
 		try {			
-			checkMovement((long)(1e9 / FPS));
 			checkMovement((long)(1e9 / FPS));
 			updatePlayerState((long)(1e9 / FPS));
 			movePlayers();
 			moveProjectiles();
+			checkCollisions();
 			checkExplosions();
-			gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
-			gameFrame.renderProjectiles(projectileList);
+			gameFrame.renderBG();
+			gameFrame.renderProjectiles(projectileMap);
 			gameFrame.renderExplosions(explosionList);
-			gameFrame.render(playerMap);
+			gameFrame.render(playerKeys);
+			gameFrame.render(playerArrows);
+			gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
 		} catch (Exception e) {e.printStackTrace();}
 	}
 
@@ -84,7 +84,7 @@ public class GameController extends Thread{
 		else playerKeys.setDirectionX(0);
 
 		if(gameFrame.keyDown.get(GameFrame.Key.S)) playerKeys.setDirectionY(1);
-		else if(gameFrame.keyDown.get(GameFrame.Key.S)) playerKeys.setDirectionY(-1);
+		else if(gameFrame.keyDown.get(GameFrame.Key.W)) playerKeys.setDirectionY(-1);
 		else playerKeys.setDirectionY(0);
 
 		if(playerKeys.getDirectionX() != dxBefore || playerKeys.getDirectionY() != dyBefore) {
@@ -122,34 +122,48 @@ public class GameController extends Thread{
 			System.exit(0);
 		}
 	}
-	
-	public void fireLaser() {
-//		Laser newLaser = new Laser(projectileID, xPos, yPos, angle, laserImage);
-//		projectileList.put(projectileID, newLaser);
-	}
-	public void fireMissile() {
-//		Missile newMissile = new Missile(projectileID, xPos, yPos, angle, missileImage);
-//		projectileList.put(projectileID, newMissile);
-	}
-	public void missileCollision() {
-//		double x = xPos+ projectile.getWidth() / 2 - Math.sin(angle) * (-projectile.getHeight() / 2) - Explosion.WIDTH / 2;
-//		double y = yPos + projectile.getHeight() / 2 + Math.cos(angle) * (-projectile.getHeight() / 2) - Explosion.HEIGHT / 2;
-//		Explosion explosion = new Explosion((int)x, (int)y, 1, explosionImage);
-//		explosion.setStartTime(System.nanoTime());
-//		explosionList.add(explosion);
-	}
 
-	public void movePlayers() {
-		for(Player player : playerMap.values()) {
-			player.move((System.nanoTime() - player.lastUpdateTime));
-			player.lastUpdateTime = System.nanoTime();
+	public void checkCollisions() {
+		Iterator<Projectile> iterator = projectileMap.keySet().iterator();
+		while (iterator.hasNext()) {
+			Projectile projectile = iterator.next();
+			if(projectileMap.get(projectile) == playerArrows && playerKeys.collision(projectile)) {				
+				iterator.remove();
+				projectile.hit(playerKeys);
+				double x = projectile.getxPos() + projectile.getWidth() / 2 - Math.sin(projectile.getAngle()) * (-projectile.getHeight() / 2) - Explosion.WIDTH / 2;
+				double y = projectile.getyPos() + projectile.getHeight() / 2 + Math.cos(projectile.getAngle()) * (-projectile.getHeight() / 2) - Explosion.HEIGHT / 2;
+				Explosion explosion = new Explosion((int)x, (int)y, 1, explosionImage);
+				explosion.setStartTime(System.nanoTime());
+				explosionList.add(explosion);
+			}		
+			else if(projectileMap.get(projectile) == playerKeys && playerArrows.collision(projectile)) {				
+				iterator.remove();
+				projectile.hit(playerArrows);
+				double x = projectile.getxPos() + projectile.getWidth() / 2 - Math.sin(projectile.getAngle()) * (-projectile.getHeight() / 2) - Explosion.WIDTH / 2;
+				double y = projectile.getyPos() + projectile.getHeight() / 2 + Math.cos(projectile.getAngle()) * (-projectile.getHeight() / 2) - Explosion.HEIGHT / 2;
+				Explosion explosion = new Explosion((int)x, (int)y, 1, explosionImage);
+				explosion.setStartTime(System.nanoTime());
+				explosionList.add(explosion);
+			}
 		}
 	}
+
+
+	public void movePlayers() {
+		playerArrows.move((System.nanoTime() - playerArrows.lastUpdateTime));
+		playerArrows.lastUpdateTime = System.nanoTime();
+
+		playerKeys.move((System.nanoTime() - playerKeys.lastUpdateTime));
+		playerKeys.lastUpdateTime = System.nanoTime();
+
+	}
 	public void moveProjectiles() {
-		for(Projectile projectile : projectileList.values()) {
+		Iterator<Projectile> iterator = projectileMap.keySet().iterator();
+		while (iterator.hasNext()) {
+			Projectile projectile = iterator.next();
 			projectile.move(System.nanoTime() - projectile.lastUpdateTime);
 			projectile.lastUpdateTime = System.nanoTime();
-			if(projectile.borderCollision())  projectileList.remove(projectile.getProjectileID());
+			if(projectile.borderCollision())  iterator.remove();
 		}
 	}
 

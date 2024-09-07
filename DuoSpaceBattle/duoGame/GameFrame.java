@@ -13,6 +13,7 @@ import java.awt.FontMetrics;
 import java.awt.Color;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -62,18 +63,21 @@ public class GameFrame extends JFrame implements KeyListener{
 		backBuffer = gameCanvas.getBufferStrategy();
 	}
 
-	public void render(ConcurrentHashMap<Integer, Player> playerMap) {
+	public void renderBG() {		
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
-		playerMap.values().forEach(player -> player.draw(g));
-		g.dispose();
-		backBuffer.show();
+		g.drawImage(background, 0, 0, width, height, gameCanvas);
 	}
-	public void renderProjectiles(ConcurrentHashMap<Integer, Projectile> projectileMap) {
+	public void render(Player player) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
-		projectileMap.values().forEach(projectile -> projectile.draw(g));
+		player.draw(g);
 		g.dispose();
 	}
-	public void renderExplosions(List<Explosion> explosionList) {
+	public void renderProjectiles(HashMap<Projectile, Player> projectileMap) {
+		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
+		projectileMap.keySet().forEach(projectile -> projectile.draw(g));
+		g.dispose();
+	}
+	public void renderExplosions(ArrayList<Explosion> explosionList) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
 		explosionList.forEach(explosion -> explosion.draw(g));
 		g.dispose();
@@ -81,9 +85,9 @@ public class GameFrame extends JFrame implements KeyListener{
 
 	public void write(String text, int x, int y, Color color, Font font) {
 		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
-		g.drawImage(background, 0, 0, width, height, gameCanvas);
 		drawText(g, text, x, y, color, font);
 		g.dispose();
+		backBuffer.show();
 	}
 	public void write(String text, Color color, Font font) {
 		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
@@ -116,8 +120,16 @@ public class GameFrame extends JFrame implements KeyListener{
 		case KeyEvent.VK_RIGHT -> keyDown.put(Key.RIGHT, state);
 		case KeyEvent.VK_UP -> keyDown.put(Key.UP, state);
 		case KeyEvent.VK_DOWN -> keyDown.put(Key.DOWN, state);
-		case KeyEvent.VK_ESCAPE -> keyDown.put(Key.ESC, state);
+		case KeyEvent.VK_SHIFT -> keyDown.put(Key.SHIFT, state);
+		
+		case KeyEvent.VK_A -> keyDown.put(Key.A, state);
+		case KeyEvent.VK_D-> keyDown.put(Key.D, state);
+		case KeyEvent.VK_W-> keyDown.put(Key.W, state);
+		case KeyEvent.VK_S-> keyDown.put(Key.S, state);
 		case KeyEvent.VK_SPACE -> keyDown.put(Key.SPACE, state);
+		
+		
+		case KeyEvent.VK_ESCAPE -> keyDown.put(Key.ESC, state);
 		}
 	}
 

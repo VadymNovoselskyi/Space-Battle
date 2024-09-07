@@ -6,6 +6,7 @@ import java.awt.geom.Area;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import java.awt.Image;
 
@@ -15,19 +16,23 @@ public class Player {
 	
 	private ArrayList<Explosion> explosionList = new ArrayList<>();
 	
+	private int health;
 	private double xPos, yPos;
 	private int dx, dy;
-	protected long lastUpdateTime = 0;
 	private double angle = 0, supposedAngle;
 	private Image img;
 	private boolean dead = false, still = true;
 	private int shotCounter = 0;
+	protected long lastUpdateTime;
 	private long lastShotTime;
+	
+	private int projectileID = 0;
 
 	public Player(int xPos, int yPos, Image img) {
 		this(xPos, yPos, 0, img);
 	}
 	public Player(int xPos, int yPos, double angle, Image img) {
+		this.health = 10;
 		this.xPos = xPos;
 		this.yPos = yPos;
 		this.angle = angle;
@@ -35,7 +40,11 @@ public class Player {
 	}
 
 	public void move(long deltaTime) {
-		if(!still) {			
+		if(dead) return;
+		supposedAngle = (dx == 0 && dy == 0) ? angle : (Math.atan2(dy, dx) + Math.PI / 2);
+		still = (dx == 0 && dy == 0) ? true : false;
+		
+		if(!still) {		
 			xPos += (deltaTime/1e9)*SPEED * Math.sin(angle);
 			yPos -= (deltaTime/1e9)*SPEED * Math.cos(angle);
 		}
@@ -45,8 +54,16 @@ public class Player {
 		if(System.nanoTime() - lastShotTime > SHOT_COOLDOWN * 1e9) {
 			lastShotTime = System.nanoTime();
 			shotCounter++;
-			if(shotCounter % SHOTS_FOR_MISSILE == 0) explosionList.add(new Missile());
-			else explosionList.add(new Laser());
+			if(shotCounter % SHOTS_FOR_MISSILE == 0) {
+				double x = xPos+ HITBOX_WIDTH / 2 - Math.sin(angle) * (-HITBOX_HEIGHT / 2) - Missile.WIDTH / 2;
+				double y = yPos + HITBOX_HEIGHT / 2 + Math.cos(angle) * (-HITBOX_HEIGHT / 2) - Missile.HEIGHT / 2;
+				GameController.projectileMap.put(new Missile(projectileID++, (int) x, (int) y, angle, GameController.missileImage), this);
+			}
+			else {
+				double x = xPos+ HITBOX_WIDTH / 2 - Math.sin(angle) * (-HITBOX_HEIGHT / 2) - Laser.WIDTH / 2;
+				double y = yPos + HITBOX_HEIGHT / 2 + Math.cos(angle) * (-HITBOX_HEIGHT / 2) - Laser.HEIGHT / 2;
+				GameController.projectileMap.put(new Laser(projectileID++, (int) x, (int) y, angle, GameController.laserImage), this);
+			}
 		}
 	}
 
@@ -100,6 +117,7 @@ public class Player {
 
 
 	public void draw(Graphics2D g) {
+		if(dead) return;
 		if(!still) {
 			double angleDifference = (supposedAngle - angle) % (2 * Math.PI);
 			
@@ -178,6 +196,12 @@ public class Player {
 		this.supposedAngle = supposedAngle;
 	}
 
+	public int getHealth() {
+		return health;
+	}
+	public void setHealth(int health) {
+		this.health = health;
+	}
 	public double getAngle() {
 		return angle;
 	}
