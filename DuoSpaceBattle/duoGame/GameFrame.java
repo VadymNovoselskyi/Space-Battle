@@ -24,7 +24,7 @@ public class GameFrame extends JFrame implements KeyListener{
 	public enum Key {
 		A, D, W, S, SPACE,
 		LEFT, RIGHT, UP, DOWN, SHIFT,
-		ESC
+		ESC, ENTER
 	}
 	public EnumMap<Key, Boolean> keyDown = new EnumMap<>(Key.class);
 
@@ -35,16 +35,16 @@ public class GameFrame extends JFrame implements KeyListener{
 	private Dimension canvasDimension;
 	private int width, height;
 
-	public GameFrame(int width, int height) {;
-	this.width = width;
-	this.height = height;
-	canvasDimension= new Dimension(width, height);
-	createWindow();
+	public GameFrame(int width, int height) {
+		this.width = width;
+		this.height = height;
+		canvasDimension= new Dimension(width, height);
+		createWindow();
 
-	addKeyListener(this);
-	for (Key key : Key.values()) {
-		keyDown.put(key, false);
-	}
+		addKeyListener(this);
+		for (Key key : Key.values()) {
+			keyDown.put(key, false);
+		}
 	}
 
 	public void createWindow() {
@@ -66,6 +66,9 @@ public class GameFrame extends JFrame implements KeyListener{
 	public void renderBG() {		
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
 		g.drawImage(background, 0, 0, width, height, gameCanvas);
+		g.setColor(Color.red);
+		g.drawRect(0, 0, width, height);
+		g.drawRect(1, 1, width - 1, height - 1);
 	}
 	public void render(Player player) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
@@ -81,19 +84,14 @@ public class GameFrame extends JFrame implements KeyListener{
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
 		explosionList.forEach(explosion -> explosion.draw(g));
 		g.dispose();
-	}
-
-	public void write(String text, int x, int y, Color color, Font font) {
-		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
-		drawText(g, text, x, y, color, font);
-		g.dispose();
 		backBuffer.show();
 	}
-	public void write(String text, Color color, Font font) {
+
+	public void write(String text, double xOffset, double yOffset, Color color, Font font) { //draw with specified x-y offset (0-1)
 		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
 		FontMetrics fontMetrics = g.getFontMetrics(font);
-		int x = (width - fontMetrics.stringWidth(text)) / 2;
-		int y = ((height - fontMetrics.getHeight()) / 2) + fontMetrics.getAscent();
+		int x = (int) ((width - fontMetrics.stringWidth(text)) * xOffset);
+		int y = (int) ((height - fontMetrics.getHeight()) * yOffset) + fontMetrics.getAscent();
 		drawText(g, text, x, y, color, font);
 		g.dispose();
 	}
@@ -121,15 +119,16 @@ public class GameFrame extends JFrame implements KeyListener{
 		case KeyEvent.VK_UP -> keyDown.put(Key.UP, state);
 		case KeyEvent.VK_DOWN -> keyDown.put(Key.DOWN, state);
 		case KeyEvent.VK_SHIFT -> keyDown.put(Key.SHIFT, state);
-		
+
 		case KeyEvent.VK_A -> keyDown.put(Key.A, state);
 		case KeyEvent.VK_D-> keyDown.put(Key.D, state);
 		case KeyEvent.VK_W-> keyDown.put(Key.W, state);
 		case KeyEvent.VK_S-> keyDown.put(Key.S, state);
 		case KeyEvent.VK_SPACE -> keyDown.put(Key.SPACE, state);
-		
-		
+
+
 		case KeyEvent.VK_ESCAPE -> keyDown.put(Key.ESC, state);
+		case KeyEvent.VK_ENTER -> keyDown.put(Key.ENTER, state);
 		}
 	}
 

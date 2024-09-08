@@ -8,8 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -20,29 +19,31 @@ import javax.swing.ImageIcon;
 
 
 public class GameController {
-	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
-	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
+	public static final int GAME_WIDTH = 1080, GAME_HEIGHT = 720;
+	private static final int SPAWN_CALCULATION_ATTEMPTS = 250, SPAWN_OFFSET = 100, SPAWN_X_r = GAME_HEIGHT / 20, SPAWN_Y_r = GAME_WIDTH / 20, SPAWN_X_R = GAME_HEIGHT / 2 - SPAWN_OFFSET - SPAWN_X_r, SPAWN_Y_R = GAME_WIDTH / 2 - SPAWN_OFFSET - SPAWN_Y_r;
 	public static final int FPS = 60;
 
 	ScheduledExecutorService executor;
 	private GameFrame gameFrame;
 	private Player playerArrows;
 	private Player playerKeys;
+	private static Random random = new Random();
 
 	protected static HashMap<Projectile, Player> projectileMap = new HashMap<>();
 	private static ArrayList<Explosion> explosionList = new ArrayList<>();
 
+	private boolean gameActive;
+	private int playerArrowsWinCounter = 0, playerKeysWinCounter = 0;
+
 	protected static Image playerKeysImage, playerArrowsImage, laserImage, missileImage, explosionImage;
-	private Font gameNameFont, gameOverFont;
-	private boolean dead = false;
+	private Font gameNameFont, gameOverFont, playerScoreFont, playAgainFont;
 
 	public GameController() throws IOException {
 		executor = Executors.newScheduledThreadPool(1);
 		gameFrame = new GameFrame(GAME_WIDTH, GAME_HEIGHT);
 		loadImages();
 		loadFonts();
-		playerArrows = new Player(500, 500, Math.PI * 7 / 4, playerKeysImage);
-		playerKeys = new Player(100, 100, Math.PI * 3 / 4, playerArrowsImage);
+		newGame();
 
 		Runnable clientTask = () -> updateClient();
 		executor.scheduleAtFixedRate(clientTask, 0, 1000 / FPS, TimeUnit.MILLISECONDS);
@@ -57,20 +58,53 @@ public class GameController {
 	}
 
 	public void updateClient() {
-		try {			
-			checkMovement((long)(1e9 / FPS));
-			updatePlayerState((long)(1e9 / FPS));
-			movePlayers();
-			moveProjectiles();
-			checkCollisions();
-			checkExplosions();
+		if(gameActive) {
+			try {			
+				checkMovement((long)(1e9 / FPS));
+				updatePlayerState((long)(1e9 / FPS));
+				movePlayers();
+				moveProjectiles();
+				checkCollisions();
+				checkExplosions();
+				checkWin();
+
+				gameFrame.renderBG();
+				writeText();
+				render();
+
+			} catch (Exception e) {e.printStackTrace();}
+		}
+		else {
 			gameFrame.renderBG();
-			gameFrame.renderProjectiles(projectileMap);
-			gameFrame.renderExplosions(explosionList);
-			gameFrame.render(playerKeys);
-			gameFrame.render(playerArrows);
-			gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
-		} catch (Exception e) {e.printStackTrace();}
+
+			writeText();
+			gameFrame.write("Game Over", 0.5, 0.4, Color.RED, gameOverFont);
+			gameFrame.write("To play again press 'Enter'", 0.5, 0.52, Color.RED, playAgainFont);
+
+			render();
+
+			if(gameFrame.keyDown.get(GameFrame.Key.ESC)) {
+				executor.shutdown();
+				gameFrame.dispose();
+				System.exit(0);
+			}
+			if(gameFrame.keyDown.get(GameFrame.Key.ENTER)) {
+				newGame();
+			}
+		}
+	}
+
+	public void writeText() {
+		gameFrame.write("Player with keys: " +playerKeysWinCounter, 0.96, 0.02, Color.GREEN, playerScoreFont);
+		gameFrame.write("Player on arrows: " +playerArrowsWinCounter, 0.96, 0.08, Color.GREEN, playerScoreFont);
+		gameFrame.write("THE BEST GAME EVER", 0.02, 0.02, Color.YELLOW, gameNameFont);
+	}
+
+	public void render() {
+		gameFrame.render(playerKeys);
+		gameFrame.render(playerArrows);
+		gameFrame.renderProjectiles(projectileMap);
+		gameFrame.renderExplosions(explosionList);
 	}
 
 
@@ -176,6 +210,49 @@ public class GameController {
 		}
 	}
 
+	public void checkWin() {
+		if(playerKeys.isDead()) {
+			playerArrowsWinCounter++;
+			gameActive = false;
+		}
+		if(playerArrows.isDead()) {
+			playerKeysWinCounter++;
+			gameActive = false;
+		}
+	}
+
+
+
+	public void newGame() {
+		int[] coords = getSpawnCoords();
+		double angle = Math.atan2(GAME_HEIGHT / 2 - coords[1], GAME_WIDTH / 2 - coords[0]) + Math.PI / 2;
+
+		playerArrows = new Player(coords[0], coords[1], angle, playerKeysImage);
+		playerKeys = new Player(GAME_WIDTH - coords[0], GAME_HEIGHT - coords[1], angle + Math.PI, playerArrowsImage);
+		gameActive = true;
+	}
+
+	public int[] getSpawnCoords() {
+		int[] coords = new int[2];
+
+		for (int i = 0; i < SPAWN_CALCULATION_ATTEMPTS; i++) {
+			double theta = random.nextDouble() * 2 * Math.PI;
+			double phi = random.nextDouble() * 2 * Math.PI;
+
+			coords[0] = (int) ((SPAWN_Y_R + SPAWN_Y_r * Math.cos(theta)) * Math.sin(phi)) + GAME_WIDTH / 2 - Player.HITBOX_WIDTH / 2;
+			coords[1] = (int) ((SPAWN_X_R + SPAWN_X_r * Math.cos(theta)) * Math.cos(phi)) + GAME_HEIGHT / 2 - Player.HITBOX_HEIGHT / 2;
+
+	        if (isValidSpawn(coords)) {
+	            break;
+	        }
+	    }		
+		return coords;
+
+	}
+	
+	private boolean isValidSpawn(int[] coords) {
+	    return coords[0] > GAME_WIDTH * 3 / 4 && coords[0] < GAME_WIDTH && coords[1] > 0 && coords[1] < GAME_HEIGHT;
+	}
 
 	public void loadImages() {
 		playerKeysImage = new ImageIcon(getClass().getResource("/ship_yellow.png")).getImage();
@@ -194,8 +271,10 @@ public class GameController {
 			path = URLDecoder.decode(path, "utf-8");
 			Font baseFont = Font.createFont(Font.TRUETYPE_FONT, new File(path));
 
-			gameNameFont = baseFont.deriveFont(24f);
-			gameOverFont = baseFont.deriveFont(60f);
+			gameNameFont = baseFont.deriveFont(20f);
+			gameOverFont = baseFont.deriveFont(66f);
+			playerScoreFont = baseFont.deriveFont(14f);
+			playAgainFont = baseFont.deriveFont(22f);
 
 		} catch (Exception e) {
 			gameNameFont = new Font("Serif", Font.PLAIN, 24);

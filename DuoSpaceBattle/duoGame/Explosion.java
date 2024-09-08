@@ -26,6 +26,7 @@ public class Explosion {
 	public void draw(Graphics2D g) {
 		alpha += (System.nanoTime() - startTime < (duration*1e9) / 2) ? fade_opacity : -fade_opacity;
 		alpha = (alpha > 1) ? 1 : alpha;
+		alpha = (alpha < 0) ? 0 : alpha;
 		g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
 		
 		g.drawImage(image, xPos, yPos, null);

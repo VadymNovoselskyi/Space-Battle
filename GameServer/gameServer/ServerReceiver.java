@@ -204,7 +204,6 @@ public class ServerReceiver implements Runnable {
 	public static int[] generateSpawnPoint() {
 		int[] optimalCoords = new int[2];
 		double maxMinDistance = Double.MIN_VALUE;
-		long time = System.nanoTime();
 
 		for (int i = 0; i < SPAWN_CALCULATION_ATTEMPTS; i++) {
 			double theta = random.nextDouble() * 2 * Math.PI;

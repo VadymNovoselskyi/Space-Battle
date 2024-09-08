@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.awt.Image;
 
 public class Player {
-	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70, SHOTS_FOR_MISSILE = 3;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 100, SHOTS_FOR_MISSILE = 3;
 	protected static final double SHOT_COOLDOWN = 1.4, MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	
 	private ArrayList<Explosion> explosionList = new ArrayList<>();
@@ -208,6 +208,10 @@ public class Player {
 
 	public boolean isStill() {
 		return still;
+	}
+
+	public boolean isDead() {
+		return dead;
 	}
 
 	public int getDirectionX() {
