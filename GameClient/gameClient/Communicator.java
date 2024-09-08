@@ -162,9 +162,5 @@ public class Communicator implements Runnable{
 		return System.nanoTime() - serverTime;
 
 	}
-
-	public void closeConnection() {
-
-	}
 }
 

@@ -30,7 +30,7 @@ public class GameFrame extends JFrame implements KeyListener{
 	private Image background = null;
 
 	private Dimension canvasDimension;
-	private int width, height;
+	private int width, height, xTranslate, yTranslate;
 
 	public GameFrame(int width, int height) {;
 	this.width = width;
@@ -49,37 +49,67 @@ public class GameFrame extends JFrame implements KeyListener{
 		gameCanvas.setSize(canvasDimension);
 		gameCanvas.setFocusable(false);
 
+		this.setTitle("Space battle");
 		this.add(gameCanvas);
 		this.pack();
 		this.setMinimumSize(canvasDimension);
-		this.setResizable(false);
+//		this.setResizable(false);
 		this.setVisible(true);
 		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); // Important to control the closing behavior
 
 		gameCanvas.createBufferStrategy(2);
 		backBuffer = gameCanvas.getBufferStrategy();
 	}
-
-	public void render(ConcurrentHashMap<Integer, Player> playerMap) {
+	
+	public void renderBG(int xPos, int yPos) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
-		playerMap.values().forEach(player -> player.draw(g));
+		int startTileX = xPos / 250;
+        int startTileY = yPos / 250;
+        int endTileX = (xPos + width) / 250 + 1;
+        int endTileY = (yPos + height) / 250 + 1;
+
+        // Loop through and draw each tile
+        for (int i = startTileX; i <= endTileX; i++) {
+            for (int j = startTileY; j <= endTileY; j++) {
+                int tileX = i * 250 - xPos;
+                int tileY = j * 250 - yPos;
+                g.drawImage(background, tileX, tileY, null);
+            }
+        }
+        this.xTranslate = width / 2 - xPos;
+        this.yTranslate = height / 2 - yPos;
+		g.translate(xTranslate, yTranslate);
+		g.setColor(Color.RED);
+		g.drawRect(0, 0, GameController.GAME_WIDTH, GameController.GAME_HEIGHT);
+        g.translate(0, 0);
 		g.dispose();
+	}
+
+	public void render(ConcurrentHashMap<Integer, Player> playerMap, Player me) {
+		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
+		g.translate(width / 2 - me.getXPos(), height / 2 - me.getYPos());
+		playerMap.values().forEach(player -> player.draw(g));
+		g.translate(0, 0);
 		backBuffer.show();
+		g.dispose();
 	}
 	public void renderProjectiles(ConcurrentHashMap<Integer, Projectile> projectileMap) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
+		g.translate(xTranslate, yTranslate);
 		projectileMap.values().forEach(projectile -> projectile.draw(g));
+		g.translate(0, 0);
 		g.dispose();
 	}
 	public void renderExplosions(List<Explosion> explosionList) {
 		Graphics2D g = (Graphics2D)backBuffer.getDrawGraphics();
+		g.translate(xTranslate, yTranslate);
 		explosionList.forEach(explosion -> explosion.draw(g));
+		g.translate(0, 0);
 		g.dispose();
 	}
 
 	public void write(String text, int x, int y, Color color, Font font) {
 		Graphics2D g = (Graphics2D) backBuffer.getDrawGraphics();
-		g.drawImage(background, 0, 0, width, height, gameCanvas);
 		drawText(g, text, x, y, color, font);
 		g.dispose();
 	}

@@ -11,7 +11,7 @@ import gameServer.Server;
 import java.awt.Image;
 
 public class Player {
-	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 70;
+	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 100;
 	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
 	private double xPos, yPos;
@@ -176,6 +176,12 @@ public class Player {
 		return angle;
 	}
 
+	public int getXPos() {
+		return (int)xPos;
+	}
+	public int getYPos() {
+		return (int)yPos;
+	}
 	public boolean isStill() {
 		return still;
 	}

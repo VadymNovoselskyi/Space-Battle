@@ -19,7 +19,7 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 
 public class GameController extends Thread{
-	public static final int GAME_WIDTH = 800, GAME_HEIGHT = 600;
+	public static final int GAME_WIDTH = 2160, GAME_HEIGHT = 1440, FRAME_WIDTH = 1080, FRAME_HEIGHT = 720;
 	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
 	public static final int FPS_PLAYER = 60, FPS_SERVER = 12;
 	private static final int DATA_FIELDS_COUNT = 8;
@@ -41,7 +41,7 @@ public class GameController extends Thread{
 
 	public GameController(String host, int port) throws IOException {
 		executor = Executors.newScheduledThreadPool(3);
-		gameFrame = new GameFrame(GAME_WIDTH, GAME_HEIGHT);
+		gameFrame = new GameFrame(FRAME_WIDTH, FRAME_HEIGHT);
 		loadImages();
 		loadFonts();
 		communicator = new Communicator(this, host, port);
@@ -69,16 +69,19 @@ public class GameController extends Thread{
 
 	public void updateClient() {
 		try {			
+			movePlayers();
+			moveProjectiles();
+			checkExplosions();
+			
+			gameFrame.renderBG(mirrorMe.getXPos(), mirrorMe.getYPos());
 			gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
 			if(dead) {
 				gameFrame.write("YOU DEAD LOL", Color.RED, gameOverFont);
 			}
-			movePlayers();
-			moveProjectiles();
-			checkExplosions();
+			
 			gameFrame.renderProjectiles(projectileMap);
 			gameFrame.renderExplosions(explosionList);
-			gameFrame.render(playerMap);
+			gameFrame.render(playerMap, mirrorMe);
 		} catch (Exception e) {e.printStackTrace();}
 	}
 
@@ -93,7 +96,6 @@ public class GameController extends Thread{
 				executor.shutdown();
 				gameFrame.dispose();
 				System.exit(0);
-
 			}
 		} catch (Exception e) {e.printStackTrace();}
 	}
@@ -276,7 +278,7 @@ public class GameController extends Thread{
 		missileImage = new ImageIcon(getClass().getResource("/missile.png")).getImage();
 		explosionImage = new ImageIcon(getClass().getResource("/explosion.png")).getImage();
 
-		Image background = new ImageIcon(getClass().getResource("/background.jpg")).getImage();
+		Image background = new ImageIcon(getClass().getResource("/tile_bg.jpg")).getImage();
 		gameFrame.setBackground(background);
 	}
 
