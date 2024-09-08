@@ -1,33 +1,36 @@
 package gameClient;
 
+import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 
-import gameServer.Server;
-
 import java.awt.Image;
 
 public class Player {
 	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 100;
 	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
+	
 	private int playerID;
+	private String name;
+	
 	private double xPos, yPos;
-	protected long lastUpdateTime = 0;
+	protected long lastUpdateTime;
 	private double angle = 0, supposedAngle;
-	private Image img;
+	
+	private int killCount = 0;
 	private boolean still = true;
+	private Image img;
 
-	public Player(int playerID, int xPos, int yPos, Image img) {
-		this(playerID, xPos, yPos, 0, img);
-	}
-	public Player(int playerID, int xPos, int yPos, double angle, Image img) {
+	public Player(int playerID, int xPos, int yPos, double angle, String name, Image img) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
 		this.angle = angle;
+		this.name = name;
 		this.img = img;
 	}
 
@@ -121,6 +124,13 @@ public class Player {
 
 		// Restore the old transform
 		g.setTransform(old);	
+		
+		FontMetrics fontMetrics = g.getFontMetrics(GameController.playerNameFont);
+		int x = (int) (xPos - fontMetrics.stringWidth(name) / 2) +HITBOX_WIDTH / 2;
+		int y = (int) (yPos - fontMetrics.getHeight() / 2) +fontMetrics.getAscent() - 16;
+		g.setFont(GameController.playerNameFont);
+		g.setColor(Color.GRAY);
+		g.drawString(name, x, y);
 	}
 
 
@@ -172,6 +182,10 @@ public class Player {
 		return playerID;
 	}
 
+	public String getName() {
+		return name;
+	}
+
 	public double getAngle() {
 		return angle;
 	}
@@ -182,6 +196,11 @@ public class Player {
 	public int getYPos() {
 		return (int)yPos;
 	}
+	
+	public int getKillCount() {
+		return killCount;
+	}
+
 	public boolean isStill() {
 		return still;
 	}
@@ -191,6 +210,14 @@ public class Player {
 		this.supposedAngle = supposedAngle;
 	}
 
+	public void setKillCount(int killCount) {
+		if(killCount != this.killCount) {
+			this.killCount = killCount;
+			GameController.sortPlayers();
+		}
+		this.killCount = killCount;
+	}
+
 	public void setStill(boolean still) {
 		this.still = still;
 	}
@@ -198,7 +225,7 @@ public class Player {
 
 	@Override
 	public String toString() {
-		return playerID + "," + (int)xPos + "," + (int)yPos + "," + supposedAngle +"," + still;
+		return playerID + "," + name +","+ (int)xPos + "," + (int)yPos + "," + supposedAngle +"," +killCount +","+ still;
 	}
 }
 

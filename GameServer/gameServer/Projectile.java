@@ -5,12 +5,13 @@ import java.awt.geom.Area;
 import java.awt.geom.Rectangle2D;
 
 public class Projectile {
-	private int playerID, projectileID, dx, dy, width, height, speed;
+	private Player player;
+	private int projectileID, dx, dy, width, height, speed;
 	private double xPos, yPos, angle;
 	protected long lastUpdateTime;
 	
-	public Projectile(int playerID, int projectileID, double xPos, double yPos, double angle, int width, int height, int speed) {
-		this.playerID = playerID; 
+	public Projectile(Player player, int projectileID, double xPos, double yPos, double angle, int width, int height, int speed) {
+		this.player = player; 
 		this.projectileID = projectileID;
 		this.xPos = xPos;
 		this.yPos = yPos;
@@ -89,7 +90,7 @@ public class Projectile {
 	
 	@Override
 	public String toString() {
-		return projectileID +","+ (int)xPos +","+ (int)yPos +","+ (angle % (Math.PI * 2)) +","+ 0.0 +","+ true +","+ lastUpdateTime; 
+		return projectileID +","+ " " +","+ (int)xPos +","+ (int)yPos +","+ (angle % (Math.PI * 2)) +","+ 0.0 +","+ 0 +","+ true +","+ lastUpdateTime; 
 	}
 
 	public double getxPos() {
@@ -104,8 +105,8 @@ public class Projectile {
 		return speed;
 	}
 
-	public int getPlayerID() {
-		return playerID;
+	public Player getPlayer() {
+		return player;
 	}
 
 	public void setxPos(double xPos) {

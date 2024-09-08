@@ -14,7 +14,7 @@ public class Communicator implements Runnable{
 	private String host;
 	private int port;
 
-	public Communicator(GameController gameController, String host, int port) throws IOException {
+	public Communicator(GameController gameController, String host, int port, String name) throws IOException {
 		this.host = host;
 		this.port = port;
 		this.gameController = gameController;
@@ -26,7 +26,7 @@ public class Communicator implements Runnable{
 			e.printStackTrace();
 		}
 		gameController.timeAdjusment = getAdjustment() - getLatency();
-		notifyServer(Command.NEW_PLAYER, System.nanoTime() - gameController.timeAdjusment);
+		notifyServer(Command.NEW_PLAYER, name, System.nanoTime() - gameController.timeAdjusment);
 	}
 
 	@Override
@@ -43,7 +43,7 @@ public class Communicator implements Runnable{
 			Command cmd = Command.valueOf(dataList[0]);
 			if(cmd == Command.PING) notifyServer(Command.PING);
 			else gameController.updatePlayerMap(data);
-		}catch (IOException e) {
+		}catch (Exception e) {
 			e.printStackTrace();;
 		}
 	}

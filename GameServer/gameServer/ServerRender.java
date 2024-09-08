@@ -32,19 +32,23 @@ public class ServerRender implements Runnable {
 	}
 
 	public void checkCollisions() {
-		for (Player player1 : Server.alivePlayersMap.values()) {
+		for (Player player : Server.alivePlayersMap.values()) {
 			synchronized (Server.projectilesList) {
 				Iterator<Projectile> iterator = Server.projectilesList.iterator();
 				while (iterator.hasNext()) {
 					Projectile projectile = iterator.next();
-					if (player1.getID() != projectile.getPlayerID() && player1.collision(projectile)) {
+					if (player != projectile.getPlayer() && player.collision(projectile)) {
 						iterator.remove(); // Safe removal using the iterator's remove method
-						projectile.hit(player1);
+						projectile.hit(player);
 						Server.notifyAllClients(Command.HIT, projectile.toString());
-						if (player1.isDead()) {
-							Server.notifyAllClients(Command.REMOVE, player1.toString());
-							Server.alivePlayersMap.remove(player1.getPlayerAddress());
-							Server.deadPlayersMap.put(player1.getPlayerAddress(), player1);
+						if (player.isDead()) {
+							Server.notifyAllClients(Command.REMOVE, player.toString());
+							Server.alivePlayersMap.remove(player.getPlayerAddress());
+							Server.deadPlayersMap.put(player.getPlayerAddress(), player);
+							
+							Player killedPlayer = projectile.getPlayer();
+							killedPlayer.setKillCount(killedPlayer.getKillCount() + 1);
+							Server.updatedPlayers.put(killedPlayer.getPlayerAddress(), killedPlayer);
 						}
 					}
 					else if(projectile.borderCollision()) iterator.remove();

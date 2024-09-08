@@ -8,21 +8,22 @@ public class Player {
 	protected static final int HITBOX_WIDTH = 42, HITBOX_HEIGHT = 84, SPEED = 100, TIMEOUT = 8;
 	protected static final double MAX_ROTATION_SPEED = Math.PI, INTERPOLATION_FACTOR = 0.25, JITTER_THRESHOLD = 0.1;
 	private int playerID;
-	private String playerAddress;
+	private String playerAddress, name;
 	private double xPos, yPos;
 	protected long lastUpdateTime, lastPingTime;
 	private double angle, supposedAngle;
-	private int health;
+	private int health, killCount = 0;
 	private boolean dead = false, still = true;
 
-	public Player(int playerID, int xPos, int yPos) {
-		this(playerID, xPos, yPos, 0);
-	}
 	public Player(int playerID, int xPos, int yPos, double angle) {
+		this(playerID, xPos, yPos, angle, "Guest");
+	}
+	public Player(int playerID, int xPos, int yPos, double angle, String name) {
 		this.playerID = playerID;
 		this.xPos = xPos;
 		this.yPos = yPos;
 		this.angle = angle;
+		this.name = name;
 		this.health = 10;
 	}
 
@@ -34,6 +35,12 @@ public class Player {
 			updateAngle();
 
 		} catch (Exception e) {e.printStackTrace();}
+	}
+	
+	public void update(int xPos, int yPos, double angle) {
+		this.xPos = xPos;
+		this.yPos = yPos;
+		this.angle = angle;
 	}
 	
 	private void updateAngle() {
@@ -172,6 +179,10 @@ public class Player {
 		return health;
 	}
 
+	public int getKillCount() {
+		return killCount;
+	}
+	
 	public boolean isDead() {
 		return dead;
 
@@ -179,6 +190,10 @@ public class Player {
 
 	public boolean isStill() {
 		return still;
+	}
+	
+	public void setKillCount(int killCount) {
+		this.killCount = killCount;
 	}
 
 	public void setStill(boolean still) {
@@ -204,6 +219,6 @@ public class Player {
 
 	@Override
 	public String toString() {
-		return playerID +","+ (int)xPos +","+ (int)yPos +","+ (angle % (Math.PI * 2)) +","+ (supposedAngle % (Math.PI * 2)) +","+ still +","+ lastUpdateTime +",";
+		return playerID +","+ name +","+ (int)xPos +","+ (int)yPos +","+ (angle % (Math.PI * 2)) +","+ (supposedAngle % (Math.PI * 2)) +","+ killCount +","+ still +","+ lastUpdateTime;
 	}
 }

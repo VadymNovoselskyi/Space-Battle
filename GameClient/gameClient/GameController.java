@@ -19,32 +19,36 @@ import java.awt.Image;
 import javax.swing.ImageIcon;
 
 public class GameController extends Thread{
-	public static final int GAME_WIDTH = 2160, GAME_HEIGHT = 1440, FRAME_WIDTH = 1080, FRAME_HEIGHT = 720;
+	public static final int FRAME_WIDTH = 1080, FRAME_HEIGHT = 720, GAME_WIDTH = (int) (FRAME_WIDTH * Math.sqrt(2)), GAME_HEIGHT = (int) (FRAME_HEIGHT * Math.sqrt(2));
 	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
 	public static final int FPS_PLAYER = 60, FPS_SERVER = 12;
-	private static final int DATA_FIELDS_COUNT = 8;
+	private static final int DATA_FIELDS_COUNT = 9;
 
 	ScheduledExecutorService executor;
 	private GameFrame gameFrame;
 	private Communicator communicator;
 	private ClientPlayer me;
 	private Player mirrorMe;
+	private String name;
 	protected long timeAdjusment = 0;
 
-	private static List<Explosion> explosionList = Collections.synchronizedList(new ArrayList<>());
 	private ConcurrentHashMap<Integer,Player> playerMap = new ConcurrentHashMap<>();
+	private static ArrayList<Player> playerList = new ArrayList<>();
 	private ConcurrentHashMap<Integer, Projectile> projectileMap = new ConcurrentHashMap<>();
+	private static List<Explosion> explosionList = Collections.synchronizedList(new ArrayList<>());
 
-	private Image meImage, enemyImage, laserImage, missileImage, explosionImage;
-	private Font gameNameFont, gameOverFont;
+
+	private static Image meImage, enemyImage, laserImage, missileImage, explosionImage;
+	protected static Font gameNameFont, gameOverFont, playerNameFont, scoreboardFont;
 	private boolean dead = false;
 
-	public GameController(String host, int port) throws IOException {
+	public GameController(String host, int port, String name) throws IOException {
+		this.name = name;
 		executor = Executors.newScheduledThreadPool(3);
 		gameFrame = new GameFrame(FRAME_WIDTH, FRAME_HEIGHT);
 		loadImages();
 		loadFonts();
-		communicator = new Communicator(this, host, port);
+		communicator = new Communicator(this, host, port, name);
 		executor.scheduleWithFixedDelay(communicator, 0, 1, TimeUnit.MILLISECONDS);
 
 		gameFrame.addWindowListener(new WindowAdapter() {
@@ -72,13 +76,19 @@ public class GameController extends Thread{
 			movePlayers();
 			moveProjectiles();
 			checkExplosions();
-			
+
 			gameFrame.renderBG(mirrorMe.getXPos(), mirrorMe.getYPos());
-			gameFrame.write("THE BEST GAME EVER", 10, 40, Color.YELLOW, gameNameFont);
+			gameFrame.write("THE BEST GAME EVER", 0.01, 0.02, Color.YELLOW, gameNameFont);
 			if(dead) {
-				gameFrame.write("YOU DEAD LOL", Color.RED, gameOverFont);
+				gameFrame.write("YOU DEAD LOL", 0.5, 0.4, Color.RED, gameOverFont);
+				gameFrame.write("To play again press 'Enter'", 0.5, 0.52, Color.RED, scoreboardFont);
 			}
-			
+			int count = 0; 
+			for(Player player : playerList) {
+				count++;
+				gameFrame.write(player.getName() +": " +player.getKillCount(), 0.98, count * 0.03, Color.GREEN, scoreboardFont);	
+			}
+
 			gameFrame.renderProjectiles(projectileMap);
 			gameFrame.renderExplosions(explosionList);
 			gameFrame.render(playerMap, mirrorMe);
@@ -91,7 +101,11 @@ public class GameController extends Thread{
 				checkMovement((long)(1e9 / FPS_PLAYER));
 				updatePlayerState((long)(1e9 / FPS_PLAYER));
 			} 
-			else if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
+			else if(gameFrame.keyDown.get(GameFrame.Key.ENTER)) {
+				communicator.notifyServer(Command.REVIVE);
+			}
+
+			if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
 				communicator.notifyServer(Command.DISCONNECT);
 				executor.shutdown();
 				gameFrame.dispose();
@@ -132,13 +146,6 @@ public class GameController extends Thread{
 			communicator.notifyServer(Command.DEAD);
 			dead = true;
 		}
-
-		if(gameFrame.keyDown.get(GameFrame.Key.ESC) || gameFrame.keyDown.get(GameFrame.Key.Q)) {
-			communicator.notifyServer(Command.DISCONNECT);
-			executor.shutdown();
-			gameFrame.dispose();
-			System.exit(0);
-		}
 	}
 
 	public void updatePlayerMap(String data) {
@@ -146,29 +153,50 @@ public class GameController extends Thread{
 
 		Command cmd = Command.valueOf(dataList[0]);
 		int id = Integer.parseInt(dataList[1]);
-		int xPos = Integer.parseInt(dataList[2]);
-		int yPos = Integer.parseInt(dataList[3]);
-		double angle = Double.parseDouble(dataList[4]);
-		double supposedAngle = Double.parseDouble(dataList[5]);
-		boolean still = Boolean.parseBoolean(dataList[6]);
-		long lastUpdateTime = Long.parseLong(dataList[7]);
+		String name = dataList[2];
+		int xPos = Integer.parseInt(dataList[3]);
+		int yPos = Integer.parseInt(dataList[4]);
+		double angle = Double.parseDouble(dataList[5]);
+		double supposedAngle = Double.parseDouble(dataList[6]);
+		int killCount = Integer.parseInt(dataList[7]);
+		boolean still = Boolean.parseBoolean(dataList[8]);
+		long lastUpdateTime = Long.parseLong(dataList[9]);
 
 		switch(cmd) {
 		case UPDATE_ALL: {
 			for(int i = 1; i < dataList.length-1; i += DATA_FIELDS_COUNT ) {
 				id = Integer.parseInt(dataList[i]);
-				xPos = Integer.parseInt(dataList[i+1]);
-				yPos = Integer.parseInt(dataList[i+2]);
-				angle = Double.parseDouble(dataList[i+3]);
-				supposedAngle = Double.parseDouble(dataList[i+4]);
-				still = Boolean.parseBoolean(dataList[i+5]);
-				lastUpdateTime = Long.parseLong(dataList[i+6]);
+				xPos = Integer.parseInt(dataList[i+2]);
+				yPos = Integer.parseInt(dataList[i+3]);
+				angle = Double.parseDouble(dataList[i+4]);
+				supposedAngle = Double.parseDouble(dataList[i+5]);
+				killCount = Integer.parseInt(dataList[i+6]);
+				still = Boolean.parseBoolean(dataList[i+7]);
+				lastUpdateTime = Long.parseLong(dataList[i+8]);
 
 				Player updatedPlayer = playerMap.get(id);
 
 				if (updatedPlayer != null) {
 					updatedPlayer.setStill(still);
 					updatedPlayer.update(xPos, yPos, angle, supposedAngle);
+					updatedPlayer.setKillCount(killCount);
+					updatedPlayer.lastUpdateTime = lastUpdateTime;
+				}
+				else { 
+					if(id == me.getPlayerID()) {
+						updatedPlayer = new Player(id, xPos, yPos, angle, name, meImage);
+						me = new ClientPlayer(id, xPos, yPos, angle, name, meImage);
+						mirrorMe = updatedPlayer;
+						dead = false;
+						System.out.println(updatedPlayer.toString() +" " +playerMap.size());
+					}
+					else updatedPlayer = new Player(id, xPos, yPos, angle, name, enemyImage);
+
+					playerMap.put(id, updatedPlayer);
+					playerList.add(updatedPlayer);
+
+					updatedPlayer.setKillCount(killCount);
+					updatedPlayer.setStill(still);
 					updatedPlayer.lastUpdateTime = lastUpdateTime;
 				}
 			}
@@ -204,36 +232,44 @@ public class GameController extends Thread{
 		}
 
 		case CONNECTED:
-			me = new ClientPlayer(id, xPos, yPos, angle, meImage);
-			mirrorMe = new Player(id, xPos, yPos, angle, meImage);
+			me = new ClientPlayer(id, xPos, yPos, angle, this.name, meImage);
+			mirrorMe = new Player(id, xPos, yPos, angle, this.name, meImage);
 			mirrorMe.lastUpdateTime = lastUpdateTime;
 			playerMap.put(id, mirrorMe);
+			playerList.add(mirrorMe);
 			this.start();
 			break;
 
 		case RECEIVE_ALL:
 			for(int i = 1; i < dataList.length-1; i += DATA_FIELDS_COUNT ) {
 				id = Integer.valueOf(dataList[i]);
-				xPos = Integer.valueOf(dataList[i+1]);
-				yPos = Integer.valueOf(dataList[i+2]);
-				angle = Double.parseDouble(dataList[i+3]);
-				still = Boolean.parseBoolean(dataList[i+5]);
-				lastUpdateTime = Long.parseLong(dataList[i+6]);
+				name = dataList[i+1];
+				xPos = Integer.valueOf(dataList[i+2]);
+				yPos = Integer.valueOf(dataList[i+3]);
+				angle = Double.parseDouble(dataList[i+4]);
+				killCount = Integer.parseInt(dataList[i+6]);
+				still = Boolean.parseBoolean(dataList[i+7]);
+				lastUpdateTime = Long.parseLong(dataList[i+8]);
 
-				Player newPlayer = new Player(id, xPos, yPos, angle, enemyImage);
+				Player newPlayer = new Player(id, xPos, yPos, angle, name, enemyImage);
 				playerMap.put(id, newPlayer);
+				playerList.add(newPlayer);
 
+				newPlayer.setKillCount(killCount);
 				newPlayer.setStill(still);
 				newPlayer.lastUpdateTime = lastUpdateTime;
 			}
 			break;
 
 		case NEW_PLAYER:
-			playerMap.put(id, new Player(id, xPos, yPos, angle, enemyImage));
+			Player newPlayer = new Player(id, xPos, yPos, angle, name, enemyImage);
+			playerMap.put(id, newPlayer);
+			playerList.add(newPlayer);
 			break;
 
 		case REMOVE:
 			if(id == mirrorMe.getPlayerID()) dead = true;
+			playerList.remove(playerMap.get(id));
 			playerMap.remove(id);
 			break;
 
@@ -271,6 +307,24 @@ public class GameController extends Thread{
 	}
 
 
+	public static void sortPlayers() {
+	    int n = playerList.size();
+	    boolean swapped;
+	    for (int i = 0; i < n - 1; i++) {
+	        swapped = false;
+	        for (int j = 0; j < n - i - 1; j++) {
+	            if (playerList.get(j).getKillCount() < playerList.get(j + 1).getKillCount()) {
+	                Player temp = playerList.get(j);
+	                playerList.set(j, playerList.get(j + 1));
+	                playerList.set(j + 1, temp);
+	                swapped = true;
+	            }
+	        }
+	        if (!swapped) break;
+	    }
+	}
+
+
 	public void loadImages() {
 		meImage = new ImageIcon(getClass().getResource("/ship_yellow.png")).getImage();
 		enemyImage = new ImageIcon(getClass().getResource("/ship_red.png")).getImage();
@@ -290,6 +344,8 @@ public class GameController extends Thread{
 
 			gameNameFont = baseFont.deriveFont(24f);
 			gameOverFont = baseFont.deriveFont(60f);
+			playerNameFont = baseFont.deriveFont(20f);
+			scoreboardFont = baseFont.deriveFont(14f);
 
 		} catch (Exception e) {
 			gameNameFont = new Font("Serif", Font.PLAIN, 24);

@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.util.Random;
 
 public class ServerReceiver implements Runnable {
-	private static final int SPAWN_CALCULATION_ATTEMPTS = 250, SPAWN_OFFSET = 75, SPAWN_X_r = Server.GAME_HEIGHT / 20, SPAWN_Y_r = Server.GAME_WIDTH / 20, SPAWN_X_R = Server.GAME_HEIGHT / 2 - SPAWN_OFFSET - SPAWN_X_r, SPAWN_Y_R = Server.GAME_WIDTH / 2 - SPAWN_OFFSET - SPAWN_Y_r;
+	private static final int SPAWN_CALCULATION_ATTEMPTS = 250, SPAWN_OFFSET = 200, SPAWN_X_r = Server.GAME_HEIGHT / 20, SPAWN_Y_r = Server.GAME_WIDTH / 20, SPAWN_X_R = Server.GAME_HEIGHT / 2 - SPAWN_OFFSET - SPAWN_X_r, SPAWN_Y_R = Server.GAME_WIDTH / 2 - SPAWN_OFFSET - SPAWN_Y_r;
 	private static Random random = new Random();
 	private DatagramSocket socket;
 
@@ -50,9 +50,10 @@ public class ServerReceiver implements Runnable {
 			System.out.println("PlayerID: " + Server.playerID + " Connected to server");
 			int[] coords = generateSpawnPoint();
 			double angle = Math.atan2(Server.GAME_HEIGHT / 2 - coords[1], Server.GAME_WIDTH / 2 - coords[0]) + Math.PI / 2;
-			Player newPlayer = new Player(Server.playerID, coords[0], coords[1], angle);
-			newPlayer.lastUpdateTime = Long.parseLong(dataList[1]);
-			newPlayer.lastPingTime = Long.parseLong(dataList[1]);
+
+			Player newPlayer = new Player(Server.playerID, coords[0], coords[1], angle, dataList[1]);
+			newPlayer.lastUpdateTime = Long.parseLong(dataList[2]);
+			newPlayer.lastPingTime = Long.parseLong(dataList[2]);
 			newPlayer.setPlayerAddress(playerAddress);
 			Server.playerID++;
 
@@ -70,9 +71,9 @@ public class ServerReceiver implements Runnable {
 		}
 
 		case MOVE: {			
-			double supposedAngle = Double.parseDouble(dataList[4]);
-			boolean still = Boolean.parseBoolean(dataList[5]);
-			long updateTime = Long.parseLong(dataList[6]);
+			double supposedAngle = Double.parseDouble(dataList[5]);
+			boolean still = Boolean.parseBoolean(dataList[7]);
+			long updateTime = Long.parseLong(dataList[8]);
 
 			Player movedPlayer = Server.alivePlayersMap.get(playerAddress);
 			if(still) movedPlayer.setStill(true);
@@ -86,10 +87,9 @@ public class ServerReceiver implements Runnable {
 		}
 
 		case FIRE_LASER: {
-			int playerID = Integer.parseInt(dataList[1]);
-			double supposedAngle = Double.parseDouble(dataList[4]);
-			double angle = Double.parseDouble(dataList[6]);
-			long updateTime = Long.parseLong(dataList[7]);
+			double supposedAngle = Double.parseDouble(dataList[5]);
+			double angle = Double.parseDouble(dataList[8]);
+			long updateTime = Long.parseLong(dataList[9]);
 
 			Player firedPlayer = Server.alivePlayersMap.get(playerAddress);
 			handlePlayerMovementUpdate(playerAddress, updateTime, supposedAngle);
@@ -97,7 +97,7 @@ public class ServerReceiver implements Runnable {
 
 			double x = firedPlayer.getxPos() + Player.HITBOX_WIDTH / 2 - Math.sin(angle) * (-Player.HITBOX_HEIGHT / 2)  - Laser.WIDTH / 2;
 			double y = firedPlayer.getyPos() + Player.HITBOX_HEIGHT / 2 + Math.cos(angle) * (-Player.HITBOX_HEIGHT / 2) - Laser.HEIGHT / 2;
-			Laser newLaser = new Laser(playerID, Server.projectileID++, x, y, angle);
+			Laser newLaser = new Laser(firedPlayer, Server.projectileID++, x, y, angle);
 			Server.projectilesList.add(newLaser);
 
 			Server.notifyAllClients(Command.LASER_FIRED, newLaser.toString());
@@ -105,10 +105,9 @@ public class ServerReceiver implements Runnable {
 		}
 
 		case FIRE_MISSILE: {			
-			int playerID = Integer.parseInt(dataList[1]);
-			double supposedAngle = Double.parseDouble(dataList[4]);
-			double angle = Double.parseDouble(dataList[6]);
-			long updateTime = Long.parseLong(dataList[7]);
+			double supposedAngle = Double.parseDouble(dataList[5]);
+			double angle = Double.parseDouble(dataList[8]);
+			long updateTime = Long.parseLong(dataList[9]);
 
 			Player firedPlayer = Server.alivePlayersMap.get(playerAddress);;
 			handlePlayerMovementUpdate(playerAddress, updateTime, supposedAngle);
@@ -116,7 +115,7 @@ public class ServerReceiver implements Runnable {
 
 			double x = firedPlayer.getxPos()+ Player.HITBOX_WIDTH / 2 - Math.sin(angle) * (-Player.HITBOX_HEIGHT / 2) - Missile.WIDTH / 2;
 			double y = firedPlayer.getyPos() + Player.HITBOX_HEIGHT / 2 + Math.cos(angle) * (-Player.HITBOX_HEIGHT / 2) - Missile.HEIGHT / 2;
-			Missile newMissile = new Missile(playerID, Server.projectileID++, x, y, angle);
+			Missile newMissile = new Missile(firedPlayer, Server.projectileID++, x, y, angle);
 			Server.projectilesList.add(newMissile);
 
 			Server.notifyAllClients(Command.MISSILE_FIRED, newMissile.toString());
@@ -192,9 +191,26 @@ public class ServerReceiver implements Runnable {
 			case PING:
 				Server.deadPlayersMap.get(playerAddress).lastPingTime = System.nanoTime();
 				break;
+				
+			case REVIVE: {
+				Player revivedPlayer = Server.deadPlayersMap.get(playerAddress);
+				Server.deadPlayersMap.remove(playerAddress);
+				Server.alivePlayersMap.put(playerAddress, revivedPlayer);
+				revivedPlayer.setDead(false);
+				int[] coords = generateSpawnPoint();
+				double angle = Math.atan2(Server.GAME_HEIGHT / 2 - coords[1], Server.GAME_WIDTH / 2 - coords[0]) + Math.PI / 2;
+
+				revivedPlayer.update(coords[0], coords[1], angle);
+				revivedPlayer.setStill(true);
+				revivedPlayer.setHealth(10);
+				Server.updatedPlayers.put(playerAddress, revivedPlayer);
+				break;
+			}
+			
 			case DISCONNECT:
 				disconnectPlayer(playerAddress);
 				break;
+				
 			default:
 				break;
 			}
@@ -233,7 +249,6 @@ public class ServerReceiver implements Runnable {
 				minDistance = distance;
 			}
 		}
-
 		return minDistance;
 	}
 }

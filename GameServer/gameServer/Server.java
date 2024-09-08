@@ -11,7 +11,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class Server {
-	protected static final int FPS_SERVER = 12, FPS_RENDER = 60, GAME_WIDTH = 2160, GAME_HEIGHT = 1440;
+	protected static final int FPS_SERVER = 12, FPS_RENDER = 60, GAME_WIDTH = (int) (1080 * Math.sqrt(2)), GAME_HEIGHT = (int) (720 * Math.sqrt(2));
+	public static final int PLAYER_HITBOX_WIDTH = 42, PLAYER_HITBOX_HEIGHT = 84;
     private static final int THREAD_POOL_SIZE = 5, NUM_RECEIVERS = 3;
 	protected static int playerID = 1, projectileID = 1;
 
